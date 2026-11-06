@@ -1,0 +1,669 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dark_background"
+    tools:targetApi="q"
+    android:forceDarkAllowed="false">
+
+    <!-- Header (Transparent Background) -->
+    <RelativeLayout
+        android:id="@+id/headerEffects"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp"
+        android:background="@android:color/transparent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/layoutAudioEffectsActions"
+            android:layout_centerVertical="true"
+            android:text="AUDIO EFFECTS"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <LinearLayout
+            android:id="@+id/layoutAudioEffectsActions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageButton
+                android:id="@+id/btnAlwaysOnAudioEffects"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_theme_btn"
+                android:src="@drawable/ic_always_on"
+                android:contentDescription="Layar Selalu Menyala"
+                android:scaleType="centerInside"
+                app:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btnThemeAudioEffects"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_theme_btn"
+                android:src="@drawable/ic_palette"
+                android:contentDescription="Ganti Tema"
+                android:scaleType="centerInside"
+                app:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btnPowerAudioEffects"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:background="@drawable/bg_theme_btn"
+                android:src="@drawable/ic_power"
+                android:contentDescription="Master Audio Effects Power"
+                android:scaleType="centerInside"
+                app:tint="@color/white" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/headerEffects"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="8dp"
+            android:clipToPadding="false"
+            android:clipChildren="false">
+
+            <!-- Reusable Volume Row -->
+            <include layout="@layout/layout_volume_header" />
+
+            <!-- Meter and Rows Container -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:baselineAligned="false"
+                android:clipToPadding="false"
+                android:clipChildren="false">
+
+                <!-- Peak Meter Left -->
+                <FrameLayout
+                    android:layout_width="6dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="-12dp"
+                    android:background="@drawable/peak_meter_background"
+                    android:padding="0.8dp">
+                    <View
+                        android:id="@+id/peakMeterLeft"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/peak_meter_clip" />
+                    <View
+                        android:id="@+id/peakHoldLeft"
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp"
+                        android:layout_gravity="bottom"
+                        android:background="@color/white"
+                        android:alpha="0.8" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginHorizontal="8dp">
+
+                    <!-- Row: Stereo & V-Bass (Weight 1) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1.2"
+                        android:orientation="horizontal"
+                        android:baselineAligned="false"
+                        android:layout_marginBottom="8dp">
+
+                        <!-- Stereo Width -->
+                        <FrameLayout
+                            android:id="@+id/cardStereo"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:background="@drawable/section_background"
+                            android:backgroundTint="#0DFFFFFF">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:orientation="vertical"
+                                android:padding="12dp">
+
+                                <RelativeLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginBottom="4dp">
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_centerVertical="true"
+                                        android:text="STEREO"
+                                        android:textColor="@color/white"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_alignParentEnd="true"
+                                        android:layout_centerVertical="true"
+                                        android:gravity="center_vertical">
+                                        <TextView
+                                            android:id="@+id/textStereoWidthValue"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:singleLine="true"
+                                            android:lines="1"
+                                            android:ellipsize="none"
+                                            android:includeFontPadding="false"
+                                            android:text="100%"
+                                            android:textColor="@color/white"
+                                            android:textSize="10sp"
+                                            android:textStyle="bold"
+                                            android:layout_marginEnd="4dp" />
+                                        <androidx.appcompat.widget.SwitchCompat
+                                            android:id="@+id/switchStereoWidth"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:scaleX="0.75"
+                                            android:scaleY="0.75"
+                                            app:thumbTint="@color/accent_green"
+                                            app:trackTint="@color/accent_green" />
+                                    </LinearLayout>
+                                </RelativeLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="0dp"
+                                    android:layout_weight="1"
+                                    android:gravity="center_vertical"
+                                    android:orientation="vertical">
+                                    <TextView
+                                        android:id="@+id/textStereoWidthLabel"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:singleLine="true"
+                                        android:lines="1"
+                                        android:ellipsize="none"
+                                        android:includeFontPadding="false"
+                                        android:text="Normal"
+                                        android:textColor="@color/accent_green"
+                                        android:textSize="10sp" />
+                                    <FrameLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="42dp">
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="4dp"
+                                            android:orientation="horizontal"
+                                            android:paddingHorizontal="16dp"
+                                            android:layout_gravity="center_vertical">
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="50" />
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="50" />
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="40" />
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="40" />
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="20" />
+                                        </LinearLayout>
+                                        <SeekBar
+                                            android:id="@+id/seekBarStereoWidth"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="match_parent"
+                                            android:max="200"
+                                            android:progress="100"
+                                            android:paddingHorizontal="8dp"
+                                            android:progressTint="@color/accent_green"
+                                            android:thumbTint="@color/accent_green"
+                                            android:splitTrack="false" />
+                                    </FrameLayout>
+                                </LinearLayout>
+                                <!-- Bottom Spacer to align with V-Bass spinners -->
+                                <Space android:layout_width="match_parent" android:layout_height="24dp" />
+                            </LinearLayout>
+                        </FrameLayout>
+
+                        <!-- Virtual Bass -->
+                        <FrameLayout
+                            android:id="@+id/cardVBass"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:background="@drawable/section_background"
+                            android:backgroundTint="#0DFFFFFF">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:orientation="vertical"
+                                android:padding="12dp">
+
+                                <RelativeLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginBottom="4dp">
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_centerVertical="true"
+                                        android:text="V-BASS"
+                                        android:textColor="@color/white"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_alignParentEnd="true"
+                                        android:layout_centerVertical="true"
+                                        android:gravity="center_vertical">
+                                        <TextView
+                                            android:id="@+id/textVirtualBassValue"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:singleLine="true"
+                                            android:lines="1"
+                                            android:ellipsize="none"
+                                            android:includeFontPadding="false"
+                                            android:text="0%"
+                                            android:textColor="@color/white"
+                                            android:textSize="10sp"
+                                            android:textStyle="bold"
+                                            android:layout_marginEnd="4dp" />
+                                        <androidx.appcompat.widget.SwitchCompat
+                                            android:id="@+id/switchVirtualBass"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:scaleX="0.75"
+                                            android:scaleY="0.75"
+                                            app:thumbTint="@color/accent_green"
+                                            app:trackTint="@color/accent_green" />
+                                    </LinearLayout>
+                                </RelativeLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/layoutVirtualBassControls"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="0dp"
+                                    android:layout_weight="1"
+                                    android:gravity="center_vertical"
+                                    android:orientation="vertical">
+                                    <TextView
+                                        android:id="@+id/textVirtualBassLabel"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:singleLine="true"
+                                        android:lines="1"
+                                        android:ellipsize="none"
+                                        android:includeFontPadding="false"
+                                        android:text="Moderate"
+                                        android:textColor="@color/accent_green"
+                                        android:textSize="10sp" />
+                                    <FrameLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="42dp">
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="4dp"
+                                            android:orientation="horizontal"
+                                            android:paddingHorizontal="16dp"
+                                            android:layout_gravity="center_vertical">
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="25" />
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="25" />
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="25" />
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="25" />
+                                            <View android:layout_width="3dp" android:layout_height="match_parent" android:background="@color/white" android:alpha="1.0" />
+                                        </LinearLayout>
+                                        <SeekBar
+                                            android:id="@+id/seekBarVirtualBass"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="match_parent"
+                                            android:max="100"
+                                            android:progress="0"
+                                            android:paddingHorizontal="8dp"
+                                            android:progressTint="@color/accent_green"
+                                            android:thumbTint="@color/accent_green"
+                                            android:splitTrack="false" />
+                                    </FrameLayout>
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="24dp"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:layout_marginTop="2dp">
+                                    <Spinner
+                                        android:id="@+id/spinnerVbMinFreq"
+                                        android:layout_width="0dp"
+                                        android:layout_height="match_parent"
+                                        android:layout_weight="1"
+                                        android:background="@drawable/spinner_background"
+                                        android:layout_marginEnd="2dp" />
+                                    <Spinner
+                                        android:id="@+id/spinnerVbMaxFreq"
+                                        android:layout_width="0dp"
+                                        android:layout_height="match_parent"
+                                        android:layout_weight="1"
+                                        android:background="@drawable/spinner_background"
+                                        android:layout_marginStart="2dp" />
+                                </LinearLayout>
+                            </LinearLayout>
+                        </FrameLayout>
+                    </LinearLayout>
+
+                    <!-- Compressor (Weight 1) -->
+                    <FrameLayout
+                        android:id="@+id/cardCompressor"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1.3"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/section_background"
+                        android:backgroundTint="#0DFFFFFF">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="12dp"
+                            android:gravity="center_vertical">
+
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="8dp">
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_centerVertical="true"
+                                    android:text="COMPRESSOR"
+                                    android:textColor="@color/white"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:gravity="center_vertical">
+                                    <TextView
+                                        android:id="@+id/textCompGR"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:singleLine="true"
+                                        android:lines="1"
+                                        android:ellipsize="none"
+                                        android:includeFontPadding="false"
+                                        android:text="GR: 0.0 dB"
+                                        android:textColor="@color/accent_yellow"
+                                        android:textSize="10sp"
+                                        android:textStyle="bold"
+                                        android:layout_marginEnd="10dp" />
+                                    <androidx.appcompat.widget.SwitchCompat
+                                        android:id="@+id/switchCompressor"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:scaleX="0.9"
+                                        android:scaleY="0.9"
+                                        app:thumbTint="@color/accent_green"
+                                        app:trackTint="@color/accent_green" />
+                                </LinearLayout>
+                            </RelativeLayout>
+
+                            <LinearLayout
+                                android:id="@+id/layoutCompressorControls"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:layout_marginBottom="8dp">
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Preset:"
+                                        android:textColor="@color/white"
+                                        android:alpha="0.6"
+                                        android:textSize="10sp" />
+                                    <Spinner
+                                        android:id="@+id/spinnerCompressorPreset"
+                                        android:layout_width="140dp"
+                                        android:layout_height="22dp"
+                                        android:layout_marginStart="8dp"
+                                        android:background="@drawable/spinner_background" />
+                                </LinearLayout>
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false">
+                                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingEnd="4dp">
+                                            <TextView android:id="@+id/textCompThresholdLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:lines="1" android:ellipsize="none" android:includeFontPadding="false" android:text="Thresh: -12dB" android:textColor="@color/white" android:textSize="10sp" android:alpha="0.8" />
+                                            <SeekBar android:id="@+id/seekBarCompThreshold" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="40" android:progress="28" android:paddingVertical="6dp" android:progressTint="@color/accent_green" android:thumbTint="@color/accent_green" />
+                                        </LinearLayout>
+                                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+                                            <TextView android:id="@+id/textCompRatioLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:lines="1" android:ellipsize="none" android:includeFontPadding="false" android:text="Ratio: 2.0:1" android:textColor="@color/white" android:textSize="10sp" android:alpha="0.8" />
+                                            <SeekBar android:id="@+id/seekBarCompRatio" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="190" android:progress="10" android:paddingVertical="6dp" android:progressTint="@color/accent_green" android:thumbTint="@color/accent_green" />
+                                        </LinearLayout>
+                                    </LinearLayout>
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:layout_marginTop="4dp"
+                                        android:baselineAligned="false">
+                                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingEnd="4dp">
+                                            <TextView android:id="@+id/textCompAttackLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:lines="1" android:ellipsize="none" android:includeFontPadding="false" android:text="Atk: 20ms" android:textColor="@color/white" android:textSize="10sp" android:alpha="0.8" />
+                                            <SeekBar android:id="@+id/seekBarCompAttack" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="99" android:progress="19" android:paddingVertical="6dp" android:progressTint="@color/accent_green" android:thumbTint="@color/accent_green" />
+                                        </LinearLayout>
+                                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+                                            <TextView android:id="@+id/textCompReleaseLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:lines="1" android:ellipsize="none" android:includeFontPadding="false" android:text="Rel: 150ms" android:textColor="@color/white" android:textSize="10sp" android:alpha="0.8" />
+                                            <SeekBar android:id="@+id/seekBarCompRelease" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="980" android:progress="130" android:paddingVertical="6dp" android:progressTint="@color/accent_green" android:thumbTint="@color/accent_green" />
+                                        </LinearLayout>
+                                    </LinearLayout>
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical"
+                                        android:layout_marginTop="4dp">
+                                        <TextView android:id="@+id/textCompMakeupLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:lines="1" android:ellipsize="none" android:includeFontPadding="false" android:text="Makeup: 0dB" android:textColor="@color/white" android:textSize="10sp" android:alpha="0.8" />
+                                        <SeekBar android:id="@+id/seekBarCompMakeup" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="120" android:progress="0" android:paddingVertical="6dp" android:progressTint="@color/accent_green" android:thumbTint="@color/accent_green" />
+                                    </LinearLayout>
+                                </LinearLayout>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </FrameLayout>
+
+                    <!-- Limiter (Weight 1) -->
+                    <FrameLayout
+                        android:id="@+id/cardLimiter"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1.3"
+                        android:background="@drawable/section_background"
+                        android:backgroundTint="#0DFFFFFF">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="12dp"
+                            android:gravity="center_vertical">
+
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="8dp">
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_centerVertical="true"
+                                    android:text="LIMITER"
+                                    android:textColor="@color/white"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:gravity="center_vertical">
+                                    <TextView
+                                        android:id="@+id/textLimiterGR"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:singleLine="true"
+                                        android:lines="1"
+                                        android:ellipsize="none"
+                                        android:includeFontPadding="false"
+                                        android:text="GR: 0.0 dB"
+                                        android:textColor="@color/accent_yellow"
+                                        android:textSize="10sp"
+                                        android:textStyle="bold"
+                                        android:layout_marginEnd="10dp" />
+                                    <androidx.appcompat.widget.SwitchCompat
+                                        android:id="@+id/switchLimiter"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:scaleX="0.9"
+                                        android:scaleY="0.9"
+                                        app:thumbTint="@color/accent_green"
+                                        app:trackTint="@color/accent_green" />
+                                </LinearLayout>
+                            </RelativeLayout>
+
+                            <LinearLayout
+                                android:id="@+id/layoutLimiterControls"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:layout_marginBottom="8dp">
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Preset:"
+                                        android:textColor="@color/white"
+                                        android:alpha="0.6"
+                                        android:textSize="10sp" />
+                                    <Spinner
+                                        android:id="@+id/spinnerLimiterPreset"
+                                        android:layout_width="90dp"
+                                        android:layout_height="22dp"
+                                        android:layout_marginStart="4dp"
+                                        android:background="@drawable/spinner_background" />
+                                    <Space android:layout_width="8dp" android:layout_height="wrap_content" />
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Mode:"
+                                        android:textColor="@color/white"
+                                        android:alpha="0.6"
+                                        android:textSize="10sp" />
+                                    <Spinner
+                                        android:id="@+id/spinnerLimiterReleaseMode"
+                                        android:layout_width="0dp"
+                                        android:layout_height="22dp"
+                                        android:layout_weight="1"
+                                        android:layout_marginStart="4dp"
+                                        android:background="@drawable/spinner_background" />
+                                </LinearLayout>
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:baselineAligned="false">
+                                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingEnd="4dp">
+                                        <TextView android:id="@+id/textLimiterCeilingLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:lines="1" android:ellipsize="none" android:includeFontPadding="false" android:text="Ceil: -1.0dB" android:textColor="@color/white" android:textSize="10sp" android:alpha="0.8" />
+                                        <SeekBar android:id="@+id/seekBarLimiterCeiling" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="60" android:progress="50" android:paddingVertical="6dp" android:progressTint="@color/accent_green" android:thumbTint="@color/accent_green" />
+                                    </LinearLayout>
+                                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+                                        <TextView android:id="@+id/textLimiterReleaseLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:lines="1" android:ellipsize="none" android:includeFontPadding="false" android:text="Rel: 200ms" android:textColor="@color/white" android:textSize="10sp" android:alpha="0.8" />
+                                        <SeekBar android:id="@+id/seekBarLimiterRelease" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="980" android:progress="180" android:paddingVertical="6dp" android:progressTint="@color/accent_green" android:thumbTint="@color/accent_green" />
+                                    </LinearLayout>
+                                </LinearLayout>
+                                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="4dp">
+                                    <TextView android:id="@+id/textLimiterLookaheadLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:lines="1" android:ellipsize="none" android:includeFontPadding="false" android:text="Look: 3.0ms" android:textColor="@color/white" android:textSize="10sp" android:alpha="0.8" />
+                                    <SeekBar android:id="@+id/seekBarLimiterLookahead" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:progress="30" android:paddingVertical="6dp" android:progressTint="@color/accent_green" android:thumbTint="@color/accent_green" />
+                                </LinearLayout>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- Peak Meter Right -->
+                <FrameLayout
+                    android:layout_width="6dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="-12dp"
+                    android:background="@drawable/peak_meter_background"
+                    android:padding="0.8dp">
+                    <View
+                        android:id="@+id/peakMeterRight"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/peak_meter_clip" />
+                    <View
+                        android:id="@+id/peakHoldRight"
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp"
+                        android:layout_gravity="bottom"
+                        android:background="@color/white"
+                        android:alpha="0.8" />
+                </FrameLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- PRO Lock Overlay for Freemium & Blocked States -->
+    <include
+        android:id="@+id/proLockOverlay"
+        layout="@layout/layout_pro_lock_overlay" />
+
+</RelativeLayout>

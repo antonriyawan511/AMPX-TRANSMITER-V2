@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape>
+            <solid android:color="#26FFFFFF" />
+            <corners android:radius="6dp" />
+            <stroke android:width="0.8dp" android:color="#40FFFFFF" />
+        </shape>
+    </item>
+    <item android:id="@+id/spinnerArrow" android:right="8dp">
+        <bitmap
+            android:src="@android:drawable/arrow_down_float"
+            android:gravity="end|center_vertical"
+            android:tint="#FF6600" />
+    </item>
+</layer-list>

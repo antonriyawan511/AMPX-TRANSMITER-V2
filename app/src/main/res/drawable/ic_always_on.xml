@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Smartphone body -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M16,1H8C6.9,1 6,1.9 6,3v18c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V3c0,-1.1 -0.9,-2 -2,-2zm0,17H8V4h8v14z"/>
+    <!-- Shining sun inside screen (always awake) -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M12,9c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM11.25,6h1.5v1.5h-1.5zM11.25,14.5h1.5v1.5h-1.5zM8.2,10.25h1.5v1.5h-1.5zM14.3,10.25h1.5v1.5h-1.5z"/>
+</vector>

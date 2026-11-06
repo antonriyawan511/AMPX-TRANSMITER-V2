@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="20dp"
+    android:background="@drawable/section_background"
+    android:backgroundTint="#161616">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="KIRIM RADIO KE RECEIVER"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.02"
+        android:layout_marginBottom="6dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="IP TARGET RECEIVER"
+        android:textColor="@color/accent_green"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/etTargetReceiverIp"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:background="@drawable/section_background"
+        android:backgroundTint="#1AFFFFFF"
+        android:hint="192.168.x.x"
+        android:paddingHorizontal="14dp"
+        android:textColor="@color/white"
+        android:textColorHint="#4DFFFFFF"
+        android:textSize="14sp"
+        android:singleLine="true"
+        android:inputType="textUri" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="DAFTAR STASIUN (MULTI-LINE / BATCH)"
+        android:textColor="@color/accent_green"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Format: Nama, URL (satu stasiun per baris)"
+        android:textColor="#80FFFFFF"
+        android:textSize="11sp"
+        android:layout_marginBottom="6dp" />
+
+    <EditText
+        android:id="@+id/etSendRadioStations"
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:background="@drawable/section_background"
+        android:backgroundTint="#1AFFFFFF"
+        android:hint="Contoh:\nPrambors FM, http://stream.pramborsfm.com/live\nDelta FM, http://s1.cloudmu.id/listen/delta_fm/radio.mp3"
+        android:gravity="top|start"
+        android:padding="12dp"
+        android:textColor="@color/white"
+        android:textColorHint="#33FFFFFF"
+        android:textSize="13sp"
+        android:inputType="textMultiLine|textNoSuggestions"
+        android:scrollbars="vertical" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnCancelSendRadio"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BATAL"
+            android:textColor="#99FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnConfirmSendRadio"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:backgroundTint="@color/accent_green"
+            android:text="KIRIM KE RECEIVER"
+            android:textColor="@color/black"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:cornerRadius="10dp" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layoutPeqControlsRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:paddingHorizontal="8dp"
+    android:paddingVertical="4dp">
+
+    <!-- Slider 1: Frequency -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@+id/tvControlFreqValue"
+                android:layout_centerVertical="true"
+                android:text="FREQUENCY"
+                android:textColor="#B3FFFFFF"
+                android:textSize="10.5sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:lines="1"
+                tools:ignore="SmallSp" />
+
+            <TextView
+                android:id="@+id/tvControlFreqValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="50 Hz"
+                android:textColor="@color/accent_green"
+                android:textSize="12.5sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:lines="1"
+                android:ellipsize="none"
+                android:includeFontPadding="false" />
+        </RelativeLayout>
+
+        <SeekBar
+            android:id="@+id/seekBarPeqFreq"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:splitTrack="false"
+            android:thumbTint="@color/white"
+            android:progressTint="@color/accent_green" />
+    </LinearLayout>
+
+    <!-- Slider 2: Gain -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@+id/tvControlGainValue"
+                android:layout_centerVertical="true"
+                android:text="GAIN"
+                android:textColor="#B3FFFFFF"
+                android:textSize="10.5sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:lines="1"
+                tools:ignore="SmallSp" />
+
+            <TextView
+                android:id="@+id/tvControlGainValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="0.0 dB"
+                android:textColor="@color/accent_green"
+                android:textSize="12.5sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:lines="1"
+                android:ellipsize="none"
+                android:includeFontPadding="false" />
+        </RelativeLayout>
+
+        <SeekBar
+            android:id="@+id/seekBarPeqGain"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:max="240"
+            android:progress="120"
+            android:splitTrack="false"
+            android:thumbTint="@color/white"
+            android:progressTint="@color/accent_green" />
+    </LinearLayout>
+
+    <!-- Slider 3: Q Factor -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@+id/tvControlQValue"
+                android:layout_centerVertical="true"
+                android:text="Q (BANDWIDTH)"
+                android:textColor="#B3FFFFFF"
+                android:textSize="10.5sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:lines="1"
+                tools:ignore="SmallSp" />
+
+            <TextView
+                android:id="@+id/tvControlQValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="1.00"
+                android:textColor="@color/accent_green"
+                android:textSize="12.5sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:lines="1"
+                android:ellipsize="none"
+                android:includeFontPadding="false" />
+        </RelativeLayout>
+
+        <SeekBar
+            android:id="@+id/seekBarPeqQ"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:max="97"
+            android:progress="7"
+            android:splitTrack="false"
+            android:thumbTint="@color/white"
+            android:progressTint="@color/accent_green" />
+    </LinearLayout>
+
+</LinearLayout>

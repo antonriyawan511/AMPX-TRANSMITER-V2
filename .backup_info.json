@@ -1,0 +1,15 @@
+{
+    "type": "project_backup",
+    "schema": 4,
+    "complete": true,
+    "backup_type": "full",
+    "project_id": "f00d56c7-6452-4409-8f6c-a0e3c32b1782",
+    "project_name": "v072 - beat - STABLE",
+    "version": 74,
+    "description": "NORMAL STABLE",
+    "timestamp": "2026-10-06T01:14:00",
+    "source_path": "C:\\Users\\Administrator\\Links\\AndroidStudioProjects\\AMPLIFIER TRANSMITER PROJECT\\v072 - beat - STABLE",
+    "sequence_path": "C:\\Users\\Administrator\\Links\\AndroidStudioProjects\\AMPLIFIER TRANSMITER PROJECT",
+    "files": 134,
+    "size": 3750283
+}

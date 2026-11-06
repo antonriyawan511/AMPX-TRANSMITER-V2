@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">AMPX PRO</string>
+    <string name="master_volume">Master Volume</string>
+    <string name="volume_percentage">%1$d%%</string>
+    <string name="ch1">CH 1</string>
+    <string name="ch2">CH 2</string>
+    <string name="link">🔗 LINK</string>
+    <string name="row_1">Sub Low</string>
+    <string name="row_2">Mid</string>
+    <string name="row_3">High</string>
+</resources>

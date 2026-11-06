@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dark_background"
+    tools:targetApi="q"
+    android:forceDarkAllowed="false">
+
+    <!-- Header -->
+    <RelativeLayout
+        android:id="@+id/headerEqualizer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="12dp">
+
+        <!-- Mode Switch Pill Selector (Gravity Left / alignParentStart, Height 40dp matching other buttons) -->
+        <LinearLayout
+            android:id="@+id/btnSwitchEqMode"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/bg_mode_pill"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="3dp">
+
+            <TextView
+                android:id="@+id/tvSegmentEq"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:paddingHorizontal="11dp"
+                android:text="EQ"
+                android:textColor="@color/white"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvSegmentPeq"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:paddingHorizontal="11dp"
+                android:text="PQ"
+                android:textColor="#80FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutEqualizerActions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="6dp">
+
+                <Spinner
+                    android:id="@+id/spinnerGeqBands"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@null"
+                    android:spinnerMode="dropdown"
+                    android:dropDownWidth="150dp"
+                    android:popupBackground="@drawable/dialog_solid_background" />
+
+                <ImageButton
+                    android:id="@+id/btnGeqBands"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_theme_btn"
+                    android:src="@drawable/ic_eq_bands"
+                    android:contentDescription="Jumlah Band GEQ"
+                    android:scaleType="centerInside"
+                    app:tint="@color/white" />
+            </FrameLayout>
+
+            <ImageButton
+                android:id="@+id/btnToggleEqGraph"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_theme_btn"
+                android:src="@drawable/ic_eq_curve"
+                android:contentDescription="Grafik EQ 30-Band"
+                android:scaleType="centerInside"
+                app:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btnSavePresetEqualizer"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_theme_btn"
+                android:src="@drawable/ic_save"
+                android:contentDescription="Save Preset"
+                android:scaleType="centerInside"
+                app:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btnAlwaysOnEqualizer"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_theme_btn"
+                android:src="@drawable/ic_always_on"
+                android:contentDescription="Layar Selalu Menyala"
+                android:scaleType="centerInside"
+                app:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btnThemeEqualizer"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_theme_btn"
+                android:src="@drawable/ic_palette"
+                android:contentDescription="Ganti Tema"
+                android:scaleType="centerInside"
+                app:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btnPowerEqualizer"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_theme_btn"
+                android:src="@drawable/ic_power"
+                android:contentDescription="Master Equalizer Power"
+                android:scaleType="centerInside"
+                app:tint="@color/white" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/mainEqualizerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/headerEqualizer"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="8dp"
+        android:clipToPadding="false"
+        android:clipChildren="false">
+
+        <!-- Header Swipe Layout (Switches between Normal Controls and 30-Band EQ Graph) -->
+        <com.example.amplifierpro.ui.HeaderSwipeLayout
+            android:id="@+id/headerSwipeLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- Normal Header: Volume + 4-Pill Controls -->
+            <LinearLayout
+                android:id="@+id/headerNormalView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Master Volume & Receiver Row -->
+                <include layout="@layout/layout_volume_header" />
+
+                <!-- 4-Pill Controls Row (Symmetrical & Compact) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp"
+                    android:paddingHorizontal="4dp">
+
+                    <!-- Pill 1: LINK (20%) -->
+                    <TextView
+                        android:id="@+id/btnLink"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/pill_full"
+                        android:gravity="center"
+                        android:text="@string/link"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:shadowColor="#33000000"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="1.5" />
+
+                    <Space
+                        android:layout_width="4dp"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Pill 2: EQ Gain (20%) -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/btnGainMinus"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:background="@drawable/pill_left"
+                            android:gravity="center"
+                            android:text="−"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btnGainPlus"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/pill_right"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="+"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:layout_marginStart="-1dp" />
+                    </LinearLayout>
+
+                    <Space
+                        android:layout_width="4dp"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Pill 3: Channel Gain (20%) -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/btnChanGainMinus"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:background="@drawable/pill_left"
+                            android:gravity="center"
+                            android:text="−"
+                            android:textColor="@color/accent_yellow"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btnChanGainPlus"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:background="@drawable/pill_right"
+                            android:gravity="center"
+                            android:text="+"
+                            android:textColor="@color/accent_yellow"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:layout_marginStart="-1dp" />
+                    </LinearLayout>
+
+                    <Space
+                        android:layout_width="4dp"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Pill 4: CH1 (20%) -->
+                    <TextView
+                        android:id="@+id/btnCH1"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/pill_full"
+                        android:gravity="center"
+                        android:text="CH1\n0 dB"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false"
+                        android:lineSpacingMultiplier="0.8"
+                        android:shadowColor="#33000000"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="1.5" />
+
+                    <Space
+                        android:layout_width="4dp"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Pill 5: CH2 (20%) -->
+                    <TextView
+                        android:id="@+id/btnCH2"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/pill_full"
+                        android:gravity="center"
+                        android:text="CH2\n0 dB"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false"
+                        android:lineSpacingMultiplier="0.8"
+                        android:shadowColor="#33000000"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="1.5" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 30-Band EQ Graph View -->
+            <FrameLayout
+                android:id="@+id/headerGraphView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/chart_background"
+                android:clipToOutline="true"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+
+                <com.example.amplifierpro.ui.LatencyChartView
+                    android:id="@+id/chartEqGraph"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </FrameLayout>
+
+        </com.example.amplifierpro.ui.HeaderSwipeLayout>
+
+        <!-- Meter and Rows Container -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="3"
+            android:orientation="horizontal"
+            android:baselineAligned="false"
+            android:clipToPadding="false"
+            android:clipChildren="false">
+
+            <!-- Peak Meter Left -->
+            <FrameLayout
+                android:layout_width="6dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="-12dp"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/peak_meter_background"
+                android:padding="0.8dp">
+                <View
+                    android:id="@+id/peakMeterLeft"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/peak_meter_clip" />
+                <View
+                    android:id="@+id/peakHoldLeft"
+                    android:layout_width="match_parent"
+                    android:layout_height="2dp"
+                    android:layout_gravity="bottom"
+                    android:background="@color/white"
+                    android:alpha="0.8" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginHorizontal="8dp">
+
+                <!-- Row 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvRow1Title"
+                        style="@style/EqualizerCategoryTitle"
+                        android:layout_marginBottom="4dp"
+                        android:text="@string/row_1" />
+
+                    <LinearLayout
+                        android:id="@+id/containerRow1"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/section_background"
+                        android:backgroundTint="#0DFFFFFF"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:padding="4dp"
+                        android:clipChildren="false"
+                        android:clipToPadding="false" />
+                </LinearLayout>
+
+                <!-- Row 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvRow2Title"
+                        style="@style/EqualizerCategoryTitle"
+                        android:layout_marginBottom="4dp"
+                        android:text="@string/row_2" />
+
+                    <LinearLayout
+                        android:id="@+id/containerRow2"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/section_background"
+                        android:backgroundTint="#0DFFFFFF"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:padding="4dp"
+                        android:clipChildren="false"
+                        android:clipToPadding="false" />
+                </LinearLayout>
+
+                <!-- Row 3 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvRow3Title"
+                        style="@style/EqualizerCategoryTitle"
+                        android:layout_marginBottom="4dp"
+                        android:text="@string/row_3" />
+
+                    <LinearLayout
+                        android:id="@+id/containerRow3"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/section_background"
+                        android:backgroundTint="#0DFFFFFF"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:padding="4dp"
+                        android:clipChildren="false"
+                        android:clipToPadding="false" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Peak Meter Right -->
+            <FrameLayout
+                android:layout_width="6dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="-12dp"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/peak_meter_background"
+                android:padding="0.8dp">
+                <View
+                    android:id="@+id/peakMeterRight"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/peak_meter_clip" />
+                <View
+                    android:id="@+id/peakHoldRight"
+                    android:layout_width="match_parent"
+                    android:layout_height="2dp"
+                    android:layout_gravity="bottom"
+                    android:background="@color/white"
+                    android:alpha="0.8" />
+            </FrameLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvMasterVolumePopup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:alpha="0"
+        android:background="@drawable/pill_value_popup"
+        android:elevation="8dp"
+        android:gravity="center"
+        android:minWidth="40dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:text="100%"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:alpha="1"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/tvEqValuePopup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:alpha="0"
+        android:background="@drawable/pill_value_popup"
+        android:elevation="8dp"
+        android:gravity="center"
+        android:minWidth="40dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:alpha="1" />
+
+    <!-- PRO Lock Overlay for Freemium & Blocked States -->
+    <include
+        android:id="@+id/proLockOverlay"
+        layout="@layout/layout_pro_lock_overlay" />
+
+</RelativeLayout>

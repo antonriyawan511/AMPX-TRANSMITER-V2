@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dark_background"
+    android:fitsSystemWindows="true"
+    tools:targetApi="q"
+    android:forceDarkAllowed="false">
+
+    <!-- Header -->
+    <RelativeLayout
+        android:id="@+id/headerEqualizer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="EQUALIZER"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchEqualizer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toStartOf="@id/btnBack"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="8dp"
+            android:checked="true"
+            app:thumbTint="@color/accent_green"
+            app:trackTint="@color/accent_green"
+            android:alpha="0.8" />
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            app:tint="@color/accent_green"
+            android:contentDescription="Close" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/headerEqualizer"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="8dp">
+
+        <!-- Master Volume -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:paddingHorizontal="4dp">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    style="@style/EqualizerCategoryTitle"
+                    android:layout_marginBottom="0dp"
+                    android:text="@string/master_volume" />
+
+                <TextView
+                    android:id="@+id/tvMasterVolumeValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="100%"
+                    android:textColor="@color/accent_green"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    tools:text="100%" />
+            </RelativeLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <SeekBar
+                    android:id="@+id/seekBarMasterVolume"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/section_background"
+                    android:backgroundTint="#0DFFFFFF"
+                    android:max="100"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="12dp"
+                    android:progress="100"
+                    android:progressTint="@color/accent_green"
+                    android:splitTrack="false"
+                    android:thumbTint="@color/white" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- Channel Selector & LINK -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp"
+            android:paddingHorizontal="4dp">
+
+            <!-- Segmented Control CH1/CH2 -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnCH1"
+                    android:layout_width="60dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/pill_left"
+                    android:gravity="center"
+                    android:text="@string/ch1"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnCH2"
+                    android:layout_width="60dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/pill_right"
+                    android:gravity="center"
+                    android:text="@string/ch2"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="-1dp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- Gain Controls -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnGainPlus"
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/pill_left"
+                    android:gravity="center"
+                    android:text="+"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnGainMinus"
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/pill_right"
+                    android:gravity="center"
+                    android:text="-"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="-1dp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- LINK Control -->
+            <TextView
+                android:id="@+id/btnLink"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="70dp"
+                android:background="@drawable/pill_full"
+                android:gravity="center"
+                android:paddingHorizontal="12dp"
+                android:text="@string/link"
+                android:textColor="@color/white"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Row 1 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+
+            <TextView
+                style="@style/EqualizerCategoryTitle"
+                android:layout_marginBottom="4dp"
+                android:text="@string/row_1" />
+
+            <LinearLayout
+                android:id="@+id/containerRow1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/section_background"
+                android:backgroundTint="#0DFFFFFF"
+                android:orientation="horizontal"
+                android:padding="4dp" />
+        </LinearLayout>
+
+        <!-- Row 2 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+
+            <TextView
+                style="@style/EqualizerCategoryTitle"
+                android:layout_marginBottom="4dp"
+                android:text="@string/row_2" />
+
+            <LinearLayout
+                android:id="@+id/containerRow2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/section_background"
+                android:backgroundTint="#0DFFFFFF"
+                android:orientation="horizontal"
+                android:padding="4dp" />
+        </LinearLayout>
+
+        <!-- Row 3 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+
+            <TextView
+                style="@style/EqualizerCategoryTitle"
+                android:layout_marginBottom="4dp"
+                android:text="@string/row_3" />
+
+            <LinearLayout
+                android:id="@+id/containerRow3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/section_background"
+                android:backgroundTint="#0DFFFFFF"
+                android:orientation="horizontal"
+                android:padding="4dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvMasterVolumePopup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:alpha="0"
+        android:background="@drawable/pill_value_popup"
+        android:elevation="8dp"
+        android:gravity="center"
+        android:minWidth="40dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:text="100%"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:alpha="1"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/tvEqValuePopup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:alpha="0"
+        android:background="@drawable/pill_value_popup"
+        android:elevation="8dp"
+        android:gravity="center"
+        android:minWidth="40dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:alpha="1" />
+
+</RelativeLayout>
