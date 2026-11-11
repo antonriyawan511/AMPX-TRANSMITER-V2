@@ -92,10 +92,12 @@ public class StreamingSettingsDialog {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // Populate Spinners (Matching Base Prototype 1:1)
+        // Populate Spinners
         String[] presets = {
                 "Standar (Nonton Video)",
-                "Gaming (Low Latency)",
+                "Gaming (Low Latency - 150 ms)",
+                "Pro Gaming (Super Cepat - 60 ms)",
+                "Real-Time Live (Ekstrem - 20 ms)",
                 "Hi-Fi Musik",
                 "Jarak Jauh / Sinyal Lemah",
                 "Kustom..."
@@ -165,28 +167,42 @@ public class StreamingSettingsDialog {
                         spFec.setSelection(0); // OFF
                         spQos.setSelection(1); // Standar
                         break;
-                    case 1: // Gaming (64k, 5ms Ultra Low Latency, Low-Delay, FEC Off)
+                    case 1: // Gaming (64k, 5ms, Low-Delay, FEC Off, Buffer 150ms)
                         spBitrate.setSelection(2); // 64 kbps
                         spFrameMs.setSelection(0); // 5 ms
                         spAudioProfile.setSelection(1); // Low-Delay Khusus
                         spFec.setSelection(0); // OFF
                         spQos.setSelection(0); // Low Latency
                         break;
-                    case 2: // Hi-Fi Musik (128k, 20ms, Musik, FEC Off, Standar)
+                    case 2: // Pro Gaming Super Cepat (64k, 5ms, Low-Delay, FEC Off, Buffer 60ms)
+                        spBitrate.setSelection(2); // 64 kbps
+                        spFrameMs.setSelection(0); // 5 ms
+                        spAudioProfile.setSelection(1); // Low-Delay Khusus
+                        spFec.setSelection(0); // OFF
+                        spQos.setSelection(0); // Low Latency
+                        break;
+                    case 3: // Real-Time Live Ekstrem (64k, 5ms, Low-Delay, FEC Off, Buffer 20ms)
+                        spBitrate.setSelection(2); // 64 kbps
+                        spFrameMs.setSelection(0); // 5 ms
+                        spAudioProfile.setSelection(1); // Low-Delay Khusus
+                        spFec.setSelection(0); // OFF
+                        spQos.setSelection(0); // Low Latency
+                        break;
+                    case 4: // Hi-Fi Musik (128k, 20ms, Musik, FEC Off, Standar, Buffer 1000ms)
                         spBitrate.setSelection(4); // 128 kbps
                         spFrameMs.setSelection(2); // 20 ms
                         spAudioProfile.setSelection(0); // Musik
                         spFec.setSelection(0); // OFF
                         spQos.setSelection(1); // Standar
                         break;
-                    case 3: // Jarak Jauh / Sinyal Lemah (48k, 20ms, Musik, FEC Off, Standar)
+                    case 5: // Jarak Jauh / Sinyal Lemah (48k, 20ms, Musik, FEC Off, Standar, Buffer 2500ms)
                         spBitrate.setSelection(1); // 48 kbps
                         spFrameMs.setSelection(2); // 20 ms
                         spAudioProfile.setSelection(0); // Musik
-                        spFec.setSelection(0); // OFF (Musik CELT tidak memakai LBRR, 0% CPU Java terbuang)
-                        spQos.setSelection(1); // Standar (DSCP AF31 0x68 - antrean router besar, tahan sinyal drop)
+                        spFec.setSelection(0); // OFF
+                        spQos.setSelection(1); // Standar
                         break;
-                    case 4: // Kustom... (Bebas)
+                    case 6: // Kustom... (Bebas)
                         break;
                 }
             }
@@ -259,9 +275,11 @@ public class StreamingSettingsDialog {
                 "Preset Mode Cepat",
                 "Menyetel kombinasi Bitrate, Frame, dan Buffer secara otomatis sekali klik sesuai kebutuhan:\n\n" +
                 "• Standar (Video): 64 kbps, 20 ms. Sangat sinkron dan mulus untuk YouTube/film (Buffer: 500ms).\n" +
-                "• Gaming (Ultra Low Latency): 64 kbps, 5 ms. Memangkas delay ke tingkat minimal instan (Buffer: 150ms).\n" +
+                "• Gaming (Low Latency): 64 kbps, 5 ms. Delay rendah dan stabil untuk game (Buffer: 150ms).\n" +
+                "• Pro Gaming (Super Cepat): 64 kbps, 5 ms. Respon kompetitif sangat cepat (Buffer: 60ms).\n" +
+                "• Real-Time Live (Ekstrem): 64 kbps, 5 ms. Latensi titik terendah untuk monitoring/DJ jarak dekat (Buffer: 20ms).\n" +
                 "• Hi-Fi Musik: 128 kbps, 20 ms. Kejernihan akustik maksimal setara CD (Buffer: 1000ms).\n" +
-                "• Jarak Jauh / Sinyal Lemah: 32 kbps, 20 ms, FEC 10%. Menghemat paket dan tahan rintangan sinyal (Buffer: 2000ms)."));
+                "• Jarak Jauh / Sinyal Lemah: 48 kbps, 20 ms. Tahan rintangan sinyal dan jarak jauh (Buffer: 2500ms)."));
 
         view.findViewById(R.id.btn_info_bitrate).setOnClickListener(v -> showInfo(context,
                 "Bitrate Audio",

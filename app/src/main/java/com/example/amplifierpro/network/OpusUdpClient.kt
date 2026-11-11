@@ -355,11 +355,13 @@ class OpusUdpClient {
         return when (preset) {
             0 -> 500 to 1500   // Standar Video (500ms target, 1500ms max)
             1 -> 150 to 500    // Gaming Low Latency (150ms target, 500ms max)
-            2 -> 1000 to 3000  // Hi-Fi Musik (1000ms target, 3000ms max)
-            3 -> 2500 to 6000  // Jarak Jauh / Sinyal Lemah (2500ms target, 6000ms max)
+            2 -> 60 to 200     // Pro Gaming Super Cepat (60ms target, 200ms max)
+            3 -> 20 to 100     // Real-Time Live Ekstrem (20ms target, 100ms max)
+            4 -> 1000 to 3000  // Hi-Fi Musik (1000ms target, 3000ms max)
+            5 -> 2500 to 6000  // Jarak Jauh / Sinyal Lemah (2500ms target, 6000ms max)
             else -> when (currentFrameMs) {
-                5 -> 150 to 500
-                10 -> 150 to 1000
+                5 -> 60 to 200
+                10 -> 150 to 500
                 20 -> 1000 to 3000
                 else -> 2500 to 6000
             }
