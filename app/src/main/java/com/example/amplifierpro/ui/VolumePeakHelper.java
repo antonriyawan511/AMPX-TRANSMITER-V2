@@ -36,6 +36,53 @@ public class VolumePeakHelper {
     // Registry of all active VolumePeakHelper instances for instant in-memory sync
     private static final Set<VolumePeakHelper> activeHelpers = Collections.newSetFromMap(new WeakHashMap<>());
     private static boolean isReceiverMode = false;
+    private static long lastGlobalKeyTime = 0;
+
+    public static boolean isReceiverModeActive() {
+        return isReceiverMode;
+    }
+
+    public static void handleVolumeKey(Context context, int delta) {
+        long now = android.os.SystemClock.uptimeMillis();
+        if (now - lastGlobalKeyTime < 100) return;
+        lastGlobalKeyTime = now;
+
+        for (VolumePeakHelper helper : activeHelpers) {
+            if (helper != null) {
+                if (isReceiverMode) {
+                    helper.stepReceiverVolume(delta);
+                } else {
+                    helper.stepMasterVolume(delta > 0 ? 5 : -5);
+                }
+                return;
+            }
+        }
+
+        // Fallback jika tidak ada UI helper aktif di memory
+        EqSettingsManager manager = new EqSettingsManager(context);
+        if (isReceiverMode) {
+            String ip = manager.getActiveReceiverIp();
+            int max = manager.getReceiverVolMax(ip);
+            if (max > 0) {
+                int current = manager.getReceiverVolumeIndex(ip);
+                int next = Math.max(0, Math.min(current + delta, max));
+                manager.setReceiverVolumeIndex(ip, next);
+                syncReceiverVolumeToOtherHelpers(null, next, max);
+            } else {
+                int currentPct = manager.getReceiverVolumePercent(ip);
+                int nextPct = Math.max(0, Math.min(100, currentPct + (delta > 0 ? 7 : -7)));
+                manager.applyReceiverVolumePercentReport(ip, nextPct);
+                syncReceiverVolumeToOtherHelpers(null, nextPct);
+                manager.requestReceiverVolumeCaps();
+            }
+            manager.sendReceiverVolStep(delta);
+        } else {
+            int current = manager.getMasterVolume();
+            int next = Math.max(0, Math.min(100, current + (delta > 0 ? 5 : -5)));
+            manager.updateMasterVolume(next);
+            syncMasterVolumeToOtherHelpers(null, next);
+        }
+    }
 
     private final Fragment fragment;
     private final EqSettingsManager settingsManager;
@@ -82,7 +129,7 @@ public class VolumePeakHelper {
                 if (max > 0) {
                     updateReceiverVolumeUI(value, max);
                 } else {
-                    // Format lama (persen) — tetap didukung
+                    // Update langsung dari persentase (REC_VOL_PCT atau format lama)
                     updateReceiverVolumeUI(value);
                 }
             }
@@ -268,6 +315,11 @@ public class VolumePeakHelper {
                 seekBarMaster.setProgress(recPct);
                 isUpdatingMasterVolume = false;
             }
+            if (tvReceiverVolumeLabel != null) {
+                tvReceiverVolumeLabel.setVisibility(View.VISIBLE);
+                tvReceiverVolumeLabel.setText("Master Vol: " + masterVol + "%");
+                tvReceiverVolumeLabel.setTextColor(dimmedColor);
+            }
         } else {
             if (tvMasterVolumeLabel != null) {
                 tvMasterVolumeLabel.setText(R.string.master_volume);
@@ -282,10 +334,11 @@ public class VolumePeakHelper {
                 seekBarMaster.setProgress(masterVol);
                 isUpdatingMasterVolume = false;
             }
-        }
-
-        if (tvReceiverVolumeLabel != null) {
-            tvReceiverVolumeLabel.setVisibility(View.GONE);
+            if (tvReceiverVolumeLabel != null) {
+                tvReceiverVolumeLabel.setVisibility(View.VISIBLE);
+                tvReceiverVolumeLabel.setText("Receiver Vol: " + recPct + "%");
+                tvReceiverVolumeLabel.setTextColor(dimmedColor);
+            }
         }
         if (tvReceiverVolumeValue != null) {
             tvReceiverVolumeValue.setVisibility(View.GONE);
@@ -306,8 +359,8 @@ public class VolumePeakHelper {
 
     private void stepReceiverVolume(int delta) {
         long now = android.os.SystemClock.uptimeMillis();
-        if (now - lastStepClickTime < 80) {
-            // Anti-bounce bila tombol fisik/layar tertekan jitter sangat cepat (<80ms)
+        if (now - lastStepClickTime < 120) {
+            // Anti-bounce bila tombol fisik/layar tertekan jitter sangat cepat (<120ms)
             return;
         }
         lastStepClickTime = now;
@@ -316,14 +369,15 @@ public class VolumePeakHelper {
         int max = settingsManager.getReceiverVolMax(ip);
 
         if (max <= 0) {
-            // Kapabilitas belum dilaporkan receiver.
-            // Gunakan estimasi step default Android STREAM_MUSIC (max 15, ~7% per step) untuk respons instan (optimistic UI),
-            // dan segera minta laporan kapabilitas asli dari receiver.
+            // Optimistic UI dengan perkiraan step Android (max 15)
             int currentPct = settingsManager.getReceiverVolumePercent(ip);
             int nextPct = Math.max(0, Math.min(100, currentPct + (delta > 0 ? 7 : -7)));
-            settingsManager.setReceiverVolume(nextPct, false);
+            
+            // Simpan estimasi secara lokal sebagai persentase agar UI responsif
+            settingsManager.applyReceiverVolumePercentReport(ip, nextPct);
             updateReceiverVolumeUI(nextPct);
             syncReceiverVolumeToOtherHelpers(this, nextPct);
+            
             settingsManager.requestReceiverVolumeCaps();
             settingsManager.sendReceiverVolStep(delta);
             return;
@@ -440,41 +494,8 @@ public class VolumePeakHelper {
     private void animateVolumeText(TextView textView, int targetValue) {
         if (textView == null) return;
         targetValue = Math.max(0, Math.min(100, targetValue));
-        if (currentDisplayedReceiverVol == targetValue) {
-            textView.setText(targetValue + "%");
-            return;
-        }
-
-        int startValue;
-        if (currentDisplayedReceiverVol >= 0) {
-            startValue = currentDisplayedReceiverVol;
-        } else {
-            String currentText = textView.getText().toString().replace("%", "").trim();
-            try {
-                startValue = Integer.parseInt(currentText);
-            } catch (Exception e) {
-                startValue = targetValue;
-            }
-        }
-
         currentDisplayedReceiverVol = targetValue;
-        if (startValue == targetValue) {
-            textView.setText(targetValue + "%");
-            return;
-        }
-
-        if (receiverVolAnimator != null && receiverVolAnimator.isRunning()) {
-            receiverVolAnimator.cancel();
-        }
-
-        receiverVolAnimator = ValueAnimator.ofInt(startValue, targetValue);
-        receiverVolAnimator.setDuration(180);
-        receiverVolAnimator.addUpdateListener(animation -> {
-            if (textView != null) {
-                textView.setText(animation.getAnimatedValue() + "%");
-            }
-        });
-        receiverVolAnimator.start();
+        textView.setText(targetValue + "%");
     }
 
     private void registerReceiver() {

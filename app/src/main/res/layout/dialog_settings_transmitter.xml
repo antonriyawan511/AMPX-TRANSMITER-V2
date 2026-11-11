@@ -1,69 +1,373 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="20dp"
     android:background="#212121">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="NETWORK SETTINGS"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="15dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Receiver IP Address (Manual)"
-        android:textColor="#AAAAAA" />
-
-    <EditText
-        android:id="@+id/etManualIpSettings"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="e.g. 192.168.43.15"
-        android:inputType="phone"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#444444"
-        android:backgroundTint="#444444"
-        android:padding="12dp"
-        android:layout_marginBottom="12dp"/>
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <Button
-        android:id="@+id/btnScanQr"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:backgroundTint="#33FFFFFF"
-        android:text="SCAN RECEIVER QR"
-        android:textColor="#FFFFFF" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PENGATURAN TRANSMISI AUDIO &amp; UDP"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Discovery Info"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold" />
+        <!-- Receiver Hardware Info Card -->
+        <LinearLayout
+            android:id="@+id/cardReceiverHwInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#2D2D2D"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:layout_marginBottom="12dp">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Aplikasi akan mencari Receiver secara otomatis via Broadcast. Jika gagal (misal di mode Hotspot), masukkan IP Receiver di atas."
-        android:textColor="#888888"
-        android:textSize="12sp"
-        android:layout_marginTop="5dp" />
+            <TextView
+                android:id="@+id/tvReceiverHwTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hardware Receiver: Belum Terdeteksi"
+                android:textColor="@color/accent_green"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/btnSaveSettings"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:backgroundTint="@color/accent_green"
-        android:text="SAVE SETTINGS"
-        android:textColor="@color/white" />
+            <TextView
+                android:id="@+id/tvReceiverHwDetails"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Hubungkan ke receiver untuk membaca DAC &amp; HAL"
+                android:textColor="#B0B0B0"
+                android:textSize="10sp" />
+        </LinearLayout>
 
-</LinearLayout>
+        <!-- Mode Transmisi Audio (PCM vs Opus) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Mode Transmisi Audio:"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btn_info_stream_mode"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:padding="2dp"
+                android:src="@drawable/ic_info"
+                android:contentDescription="Info Mode Audio" />
+        </LinearLayout>
+
+        <Spinner
+            android:id="@+id/sp_stream_mode"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginBottom="10dp"
+            android:background="#2D2D2D" />
+
+        <!-- Sample Rate Transmisi (Auto vs 44.1k vs 48k) -->
+        <LinearLayout
+            android:id="@+id/layout_sample_rate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Sample Rate Transmisi:"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btn_info_sample_rate"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:padding="2dp"
+                android:src="@drawable/ic_info"
+                android:contentDescription="Info Sample Rate" />
+        </LinearLayout>
+
+        <Spinner
+            android:id="@+id/sp_sample_rate"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginBottom="12dp"
+            android:background="#2D2D2D" />
+
+        <LinearLayout
+            android:id="@+id/layout_opus_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+        <!-- 1. Preset Cepat -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Preset Mode Cepat:"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btn_info_preset"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:padding="2dp"
+                android:src="@drawable/ic_info"
+                android:contentDescription="Info Preset" />
+        </LinearLayout>
+
+        <Spinner
+            android:id="@+id/sp_preset"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginBottom="10dp"
+            android:background="#2D2D2D" />
+
+        <!-- 3. Bitrate & Durasi Frame (2 Kolom) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Bitrate Opus:"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/btn_info_bitrate"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:padding="2dp"
+                        android:src="@drawable/ic_info"
+                        android:contentDescription="Info Bitrate" />
+                </LinearLayout>
+
+                <Spinner
+                    android:id="@+id/sp_bitrate"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:layout_marginTop="2dp"
+                    android:background="#2D2D2D" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Durasi Frame:"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/btn_info_frame"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:padding="2dp"
+                        android:src="@drawable/ic_info"
+                        android:contentDescription="Info Frame" />
+                </LinearLayout>
+
+                <Spinner
+                    android:id="@+id/sp_frame_ms"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:layout_marginTop="2dp"
+                    android:background="#2D2D2D" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 4. Profil Audio & Packet Loss Protection FEC (2 Kolom) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Profil Audio:"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/btn_info_profile"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:padding="2dp"
+                        android:src="@drawable/ic_info"
+                        android:contentDescription="Info Profile" />
+                </LinearLayout>
+
+                <Spinner
+                    android:id="@+id/sp_audio_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:layout_marginTop="2dp"
+                    android:background="#2D2D2D" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Proteksi FEC:"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/btn_info_fec"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:padding="2dp"
+                        android:src="@drawable/ic_info"
+                        android:contentDescription="Info FEC" />
+                </LinearLayout>
+
+                <Spinner
+                    android:id="@+id/sp_fec"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:layout_marginTop="2dp"
+                    android:background="#2D2D2D" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 5. QoS Mode -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="QoS (Prioritas Paket Wi-Fi):"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btn_info_qos"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:padding="2dp"
+                android:src="@drawable/ic_info"
+                android:contentDescription="Info QoS" />
+        </LinearLayout>
+
+        <Spinner
+            android:id="@+id/sp_qos"
+            android:layout_width="match_parent"
+            android:layout_height="38dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="16dp"
+            android:background="#2D2D2D" />
+        </LinearLayout>
+
+        <!-- 6. Tombol Aksi Simpan -->
+        <Button
+            android:id="@+id/btnSaveSettings"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:backgroundTint="@color/accent_green"
+            android:text="SIMPAN PENGATURAN"
+            android:textColor="@color/black"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+</ScrollView>

@@ -3,7 +3,7 @@ package com.example.amplifierpro.audio;
 public class EqProcessor {
     private static final String TAG = "EqProcessor";
     public static final int MAX_BANDS = 30;
-    private static final float SAMPLE_RATE = 44100f;
+    private volatile float sampleRate = 48000f;
 
     public static final float[] FREQS_30 = {
             25, 31.5f, 40, 50, 63, 80, 100, 125, 160, 200,
@@ -39,6 +39,12 @@ public class EqProcessor {
     private static final int PEQ_BANDS = 4;
     private final Biquad[] peqFiltersL = new Biquad[PEQ_BANDS];
     private final Biquad[] peqFiltersR = new Biquad[PEQ_BANDS];
+    private final float[] peqFreqs = new float[PEQ_BANDS];
+    private final float[] peqGainsL = new float[PEQ_BANDS];
+    private final float[] peqGainsR = new float[PEQ_BANDS];
+    private final float[] peqQs = new float[PEQ_BANDS];
+    private int vbMinFreq = 30;
+    private int vbMaxFreq = 100;
     private volatile boolean isPeqMode = false;
     
     private volatile float masterVolumeGain = 1.0f;
@@ -90,6 +96,8 @@ public class EqProcessor {
     private final Biquad vbFilterMaxR = new Biquad();
     private final Biquad vbFilterOutL = new Biquad();
     private final Biquad vbFilterOutR = new Biquad();
+    private final Biquad sideHpFilter = new Biquad();
+    private volatile int stereoCutoffFreq = 120;
 
     public EqProcessor() {
         for (int i = 0; i < MAX_BANDS; i++) {
@@ -106,8 +114,11 @@ public class EqProcessor {
         }
         
         setVirtualBassFrequencies(30, 100);
-        vbFilterOutL.setLowPass(400, SAMPLE_RATE, 0.707f);
-        vbFilterOutR.setLowPass(400, SAMPLE_RATE, 0.707f);
+        vbFilterOutL.setLowPass(400, sampleRate, 0.707f);
+        vbFilterOutR.setLowPass(400, sampleRate, 0.707f);
+        if (stereoCutoffFreq > 0) {
+            sideHpFilter.setHighPass(stereoCutoffFreq, sampleRate, 0.707f);
+        }
     }
 
     public void setEqMode(String mode) {
@@ -116,12 +127,52 @@ public class EqProcessor {
 
     public synchronized void updatePeqFilterL(int index, float freq, float gainDb, float q) {
         if (index < 0 || index >= PEQ_BANDS) return;
-        peqFiltersL[index].setPeakingEQ(freq, SAMPLE_RATE, q, gainDb);
+        peqFreqs[index] = freq;
+        peqGainsL[index] = gainDb;
+        peqQs[index] = q;
+        peqFiltersL[index].setPeakingEQ(freq, sampleRate, q, gainDb);
     }
 
     public synchronized void updatePeqFilterR(int index, float freq, float gainDb, float q) {
         if (index < 0 || index >= PEQ_BANDS) return;
-        peqFiltersR[index].setPeakingEQ(freq, SAMPLE_RATE, q, gainDb);
+        peqFreqs[index] = freq;
+        peqGainsR[index] = gainDb;
+        peqQs[index] = q;
+        peqFiltersR[index].setPeakingEQ(freq, sampleRate, q, gainDb);
+    }
+
+    public float getSampleRate() {
+        return sampleRate;
+    }
+
+    public synchronized void setSampleRate(float sr) {
+        if (sr <= 0 || Math.abs(this.sampleRate - sr) < 1.0f) return;
+        this.sampleRate = sr;
+        needsUpdateL = true;
+        needsUpdateR = true;
+
+        for (int i = 0; i < PEQ_BANDS; i++) {
+            if (peqFreqs[i] > 0) {
+                peqFiltersL[i].setPeakingEQ(peqFreqs[i], sampleRate, peqQs[i], peqGainsL[i]);
+                peqFiltersR[i].setPeakingEQ(peqFreqs[i], sampleRate, peqQs[i], peqGainsR[i]);
+            }
+        }
+
+        vbFilterMinL.setHighPass(vbMinFreq, sampleRate, 0.707f);
+        vbFilterMinR.setHighPass(vbMinFreq, sampleRate, 0.707f);
+        vbFilterMaxL.setLowPass(vbMaxFreq, sampleRate, 0.707f);
+        vbFilterMaxR.setLowPass(vbMaxFreq, sampleRate, 0.707f);
+        vbFilterOutL.setLowPass(400, sampleRate, 0.707f);
+        vbFilterOutR.setLowPass(400, sampleRate, 0.707f);
+
+        if (stereoCutoffFreq > 0) {
+            sideHpFilter.setHighPass(stereoCutoffFreq, sampleRate, 0.707f);
+        } else {
+            sideHpFilter.reset();
+        }
+
+        setCompressorParams(compThreshold, compRatio, compAttack, compRelease, compMakeup);
+        setLimiterParams(20.0f * (float) Math.log10(Math.max(1e-5f, limiterCeiling)), limiterReleaseMode, limiterReleaseMs, limiterLookaheadMs);
     }
 
     public void setMasterVolume(int volumePercent) {
@@ -138,10 +189,26 @@ public class EqProcessor {
 
     public void setStereoWidthEnabled(boolean enabled) {
         this.stereoWidthEnabled = enabled;
+        if (!enabled) {
+            sideHpFilter.reset();
+        }
     }
 
     public void setStereoWidthValue(int widthPercent) {
         this.stereoWidthGain = widthPercent / 100f;
+    }
+
+    public synchronized void setStereoCutoffFreq(int cutoffHz) {
+        this.stereoCutoffFreq = cutoffHz;
+        if (cutoffHz > 0) {
+            sideHpFilter.setHighPass(cutoffHz, sampleRate, 0.707f);
+        } else {
+            sideHpFilter.reset();
+        }
+    }
+
+    public int getStereoCutoffFreq() {
+        return stereoCutoffFreq;
     }
 
     public void setVirtualBassEnabled(boolean enabled) {
@@ -153,10 +220,12 @@ public class EqProcessor {
     }
 
     public void setVirtualBassFrequencies(int minFreq, int maxFreq) {
-        vbFilterMinL.setHighPass(minFreq, SAMPLE_RATE, 0.707f);
-        vbFilterMinR.setHighPass(minFreq, SAMPLE_RATE, 0.707f);
-        vbFilterMaxL.setLowPass(maxFreq, SAMPLE_RATE, 0.707f);
-        vbFilterMaxR.setLowPass(maxFreq, SAMPLE_RATE, 0.707f);
+        this.vbMinFreq = minFreq;
+        this.vbMaxFreq = maxFreq;
+        vbFilterMinL.setHighPass(minFreq, sampleRate, 0.707f);
+        vbFilterMinR.setHighPass(minFreq, sampleRate, 0.707f);
+        vbFilterMaxL.setLowPass(maxFreq, sampleRate, 0.707f);
+        vbFilterMaxR.setLowPass(maxFreq, sampleRate, 0.707f);
     }
 
     public void setCompressorEnabled(boolean enabled) {
@@ -172,8 +241,8 @@ public class EqProcessor {
         this.compMakeup = makeup;
         
         // alpha = exp(-1.0 / (sample_rate * time_seconds))
-        this.compAlphaA = (float) Math.exp(-1.0 / (SAMPLE_RATE * (attackMs / 1000.0)));
-        this.compAlphaR = (float) Math.exp(-1.0 / (SAMPLE_RATE * (releaseMs / 1000.0)));
+        this.compAlphaA = (float) Math.exp(-1.0 / (sampleRate * (attackMs / 1000.0)));
+        this.compAlphaR = (float) Math.exp(-1.0 / (sampleRate * (releaseMs / 1000.0)));
     }
 
     public void setLimiterEnabled(boolean enabled) {
@@ -190,14 +259,14 @@ public class EqProcessor {
         this.limiterReleaseMode = releaseMode;
         this.limiterReleaseMs = releaseMs;
         this.limiterLookaheadMs = lookaheadMs;
-        this.limiterLookaheadSamples = (int) (lookaheadMs * SAMPLE_RATE / 1000.0f);
+        this.limiterLookaheadSamples = (int) (lookaheadMs * sampleRate / 1000.0f);
         if (this.limiterLookaheadSamples > 511) this.limiterLookaheadSamples = 511;
 
         float effectiveRelease = releaseMs;
         if ("AUTO".equals(releaseMode)) {
             effectiveRelease = 200.0f; // Base for auto
         }
-        this.limiterAlphaR = (float) Math.exp(-1.0 / (SAMPLE_RATE * (effectiveRelease / 1000.0)));
+        this.limiterAlphaR = (float) Math.exp(-1.0 / (sampleRate * (effectiveRelease / 1000.0)));
     }
 
     public void setChannelGains(float ch1Db, float ch2Db) {
@@ -361,7 +430,7 @@ public class EqProcessor {
     private void updateFilter(Biquad filter, float rawGain, int bandIndex) {
         float dbGain = rawGain - 12;
         float freq = activeFrequencies[bandIndex];
-        filter.setPeakingEQ(freq, SAMPLE_RATE, activeQ, dbGain);
+        filter.setPeakingEQ(freq, sampleRate, activeQ, dbGain);
     }
 
     public void processAudio(byte[] buffer, int length) {
@@ -443,6 +512,9 @@ public class EqProcessor {
             if (audioEffectsEnabled && stereoWidthEnabled) {
                 float mid = (l + r) / 2.0f;
                 float side = (l - r) / 2.0f;
+                if (stereoCutoffFreq > 0) {
+                    side = sideHpFilter.process(side);
+                }
                 side *= stereoWidthGain;
                 l = mid + side;
                 r = mid - side;
@@ -466,7 +538,7 @@ public class EqProcessor {
                     float currentAlphaR = limiterAlphaR;
                     if ("AUTO".equals(limiterReleaseMode)) {
                         float gr = 1.0f - limiterGain;
-                        currentAlphaR = (float) Math.exp(-1.0 / (SAMPLE_RATE * ((100.0f + gr * 900.0f) / 1000.0)));
+                        currentAlphaR = (float) Math.exp(-1.0 / (sampleRate * ((100.0f + gr * 900.0f) / 1000.0)));
                     }
                     limiterGain = currentAlphaR * limiterGain + (1.0f - currentAlphaR) * targetGain;
                 }
@@ -578,11 +650,17 @@ public class EqProcessor {
             float alpha = sn / (2 * q);
 
             float a0 = 1 + alpha;
-            b0 = (1 + cs) / 2 / a0;
-            b1 = -(1 + cs) / a0;
-            b2 = (1 + cs) / 2 / a0;
-            a1 = -2 * cs / a0;
-            a2 = (1 - alpha) / a0;
+            float nb0 = (1 + cs) / 2 / a0;
+            float nb1 = -(1 + cs) / a0;
+            float nb2 = (1 + cs) / 2 / a0;
+            float na1 = -2 * cs / a0;
+            float na2 = (1 - alpha) / a0;
+
+            b0 = nb0;
+            b1 = nb1;
+            b2 = nb2;
+            a1 = na1;
+            a2 = na2;
             active = true;
         }
 
@@ -591,6 +669,11 @@ public class EqProcessor {
             float out = b0 * in + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
             x2 = x1; x1 = in;
             y2 = y1; y1 = out;
+
+            // Anti-denormal flush to prevent mobile CPU penalty on silence/fadeout
+            if (Math.abs(y1) < 1e-15f) y1 = 0.0f;
+            if (Math.abs(y2) < 1e-15f) y2 = 0.0f;
+
             return out;
         }
     }

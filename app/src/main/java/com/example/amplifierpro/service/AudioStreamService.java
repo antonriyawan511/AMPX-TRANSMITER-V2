@@ -2,7 +2,7 @@ package com.example.amplifierpro.service;
 
 import com.example.amplifierpro.audio.EqProcessor;
 import com.example.amplifierpro.manager.EqSettingsManager;
-import com.example.amplifierpro.network.AudioClient;
+import com.example.amplifierpro.network.OpusUdpClient;
 import com.example.amplifierpro.network.DiscoveryClient;
 import com.example.amplifierpro.network.MetadataSender;
 import com.example.amplifierpro.security.LicenseManager;
@@ -40,6 +40,7 @@ import java.util.concurrent.Executors;
 public class AudioStreamService extends Service {
     private static final String TAG = "AudioStreamService";
     public static final String ACTION_STREAM_STATE_CHANGED = "com.example.amplifierpro.STREAM_STATE_CHANGED";
+    public static final String ACTION_TRIGGER_DISCOVERY = "com.example.amplifierpro.TRIGGER_DISCOVERY";
     public static final String ACTION_RECEIVER_NAME_DISCOVERED = "com.example.amplifierpro.RECEIVER_NAME_DISCOVERED";
     public static final String ACTION_IP_DISCOVERED = "com.example.amplifierpro.IP_DISCOVERED";
     public static final String ACTION_TRIAL_EXPIRED = "com.example.amplifierpro.TRIAL_EXPIRED";
@@ -53,8 +54,8 @@ public class AudioStreamService extends Service {
     
     private static final String CHANNEL_ID = "AudioStreamChannel";
     private static final int NOTIFICATION_ID = 1;
-    private static final int SAMPLE_RATE = 44100;
-    private static final int PORT_TCP = 50005;
+    private static final int SAMPLE_RATE = 48000;
+    public static final int PORT_UDP = 5000;
     private static final int PORT_DISCOVERY = 50006;
     private static final int PORT_METADATA = 50007;
 
@@ -93,10 +94,11 @@ public class AudioStreamService extends Service {
 
     private volatile MediaProjection mediaProjection;
     private volatile AudioRecord audioRecord;
+    private volatile int currentAudioRecordSampleRate = 0;
     private ExecutorService executorService;
     private Handler mainHandler;
     private volatile String manualIp = null;
-    private final AudioClient audioClient = new AudioClient();
+    public static final OpusUdpClient opusClient = new OpusUdpClient();
     private final DiscoveryClient discoveryClient = new DiscoveryClient(PORT_DISCOVERY);
     private final MetadataSender metadataSender = new MetadataSender();
     private final EqProcessor eqProcessor = new EqProcessor();
@@ -141,8 +143,10 @@ public class AudioStreamService extends Service {
             } else if (EqSettingsManager.ACTION_STEREO_WIDTH_UPDATED.equals(action)) {
                 boolean enabled = intent.getBooleanExtra(EqSettingsManager.EXTRA_ENABLED, false);
                 int value = intent.getIntExtra(EqSettingsManager.EXTRA_VALUE, 100);
+                int cutoff = intent.getIntExtra(EqSettingsManager.EXTRA_STEREO_CUTOFF, eqSettingsManager.getStereoCutoffFreq());
                 eqProcessor.setStereoWidthEnabled(enabled);
                 eqProcessor.setStereoWidthValue(value);
+                eqProcessor.setStereoCutoffFreq(cutoff);
             } else if (EqSettingsManager.ACTION_VIRTUAL_BASS_UPDATED.equals(action)) {
                 boolean enabled = intent.getBooleanExtra(EqSettingsManager.EXTRA_ENABLED, false);
                 int value = intent.getIntExtra(EqSettingsManager.EXTRA_VALUE, 0);
@@ -192,6 +196,10 @@ public class AudioStreamService extends Service {
                 sendMetadataToReceiver("VOL_SET:" + index);
             } else if (EqSettingsManager.ACTION_RECEIVER_VOL_CAPS_REQ.equals(action)) {
                 sendMetadataToReceiver("VOL_CAPS_REQ");
+            } else if (EqSettingsManager.ACTION_RECEIVER_HW_REQ.equals(action)) {
+                sendMetadataToReceiver("REC_HW_REQ");
+            } else if (EqSettingsManager.ACTION_AUDIO_STREAM_MODE_CHANGED.equals(action)) {
+                new Thread(opusClient::close).start();
             } else if (EqSettingsManager.ACTION_RECEIVER_VOL_UP.equals(action)) {
                 sendMetadataToReceiver("VOL_UP");
             } else if (EqSettingsManager.ACTION_RECEIVER_VOL_DOWN.equals(action)) {
@@ -295,6 +303,38 @@ public class AudioStreamService extends Service {
     }
 
     public static volatile String currentReceiverIp = null;
+    public static volatile long lastReceiverAliveTimestamp = 0L;
+    public static volatile boolean isReceiverConnected = false;
+
+    public static void notifyReceiverAlive(String senderIp) {
+        if (senderIp != null && (currentReceiverIp == null || currentReceiverIp.isEmpty() || senderIp.equals(currentReceiverIp))) {
+            lastReceiverAliveTimestamp = System.currentTimeMillis();
+            if (!isReceiverConnected) {
+                isReceiverConnected = true;
+                if (instance != null && isServiceRunning) {
+                    instance.updateStatus("STREAMING AKTIF");
+                    instance.broadcastLicenseStatusToReceiver();
+                    instance.sendMetadataToReceiver("VOL_CAPS_REQ");
+                    if (instance.lastMetadataInfo != null) {
+                        instance.sendMetadataToReceiver(instance.lastMetadataInfo);
+                    }
+                }
+            }
+        }
+    }
+
+    public static void notifyReceiverDisconnected(String senderIp) {
+        if (senderIp != null && (currentReceiverIp == null || currentReceiverIp.isEmpty() || senderIp.equals(currentReceiverIp))) {
+            lastReceiverAliveTimestamp = 0L;
+            if (isReceiverConnected) {
+                isReceiverConnected = false;
+                if (instance != null && isServiceRunning) {
+                    instance.updateStatus("Receiver Terputus...");
+                }
+            }
+        }
+    }
+
     private volatile String lastMetadataInfo = null;
     
     private PowerManager.WakeLock wakeLock;
@@ -337,6 +377,7 @@ public class AudioStreamService extends Service {
         eqProcessor.setAudioEffectsEnabled(dspAllowed && eqSettingsManager.isAudioEffectsEnabled());
         eqProcessor.setStereoWidthEnabled(eqSettingsManager.isStereoWidthEnabled());
         eqProcessor.setStereoWidthValue(eqSettingsManager.getStereoWidthValue());
+        eqProcessor.setStereoCutoffFreq(eqSettingsManager.getStereoCutoffFreq());
         eqProcessor.setVirtualBassEnabled(eqSettingsManager.isVirtualBassEnabled());
         eqProcessor.setVirtualBassAmount(eqSettingsManager.getVirtualBassAmount());
         eqProcessor.setVirtualBassFrequencies(eqSettingsManager.getVirtualBassMinFreq(), eqSettingsManager.getVirtualBassMaxFreq());
@@ -380,6 +421,8 @@ public class AudioStreamService extends Service {
         eqFilter.addAction(EqSettingsManager.ACTION_RECEIVER_VOL_STEP);
         eqFilter.addAction(EqSettingsManager.ACTION_RECEIVER_VOL_SET);
         eqFilter.addAction(EqSettingsManager.ACTION_RECEIVER_VOL_CAPS_REQ);
+        eqFilter.addAction(EqSettingsManager.ACTION_RECEIVER_HW_REQ);
+        eqFilter.addAction(EqSettingsManager.ACTION_AUDIO_STREAM_MODE_CHANGED);
         eqFilter.addAction(EqSettingsManager.ACTION_EQ_MODE_CHANGED);
         eqFilter.addAction(EqSettingsManager.ACTION_PEQ_VALUE_CHANGED);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -399,12 +442,21 @@ public class AudioStreamService extends Service {
 
         WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (wm != null) {
-            wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "AmplifierPro:WifiLock");
+            int lockMode = WifiManager.WIFI_MODE_FULL_HIGH_PERF;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                lockMode = WifiManager.WIFI_MODE_FULL_LOW_LATENCY;
+            }
+            wifiLock = wm.createWifiLock(lockMode, "AmplifierPro:WifiLock");
             wifiLock.acquire();
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, createNotification(lastStatus), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+            try {
+                startForeground(NOTIFICATION_ID, createNotification(lastStatus), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+            } catch (Exception e) {
+                Log.w(TAG, "Initial startForeground with MEDIA_PROJECTION type failed, falling back: " + e.getMessage());
+                startForeground(NOTIFICATION_ID, createNotification(lastStatus));
+            }
         } else {
             startForeground(NOTIFICATION_ID, createNotification(lastStatus));
         }
@@ -426,11 +478,22 @@ public class AudioStreamService extends Service {
                 return START_NOT_STICKY;
             }
 
+            if (ACTION_TRIGGER_DISCOVERY.equals(intent.getAction())) {
+                Log.d(TAG, "ACTION_TRIGGER_DISCOVERY received, resetting manualIp and closing opus socket to trigger discovery");
+                manualIp = null;
+                if (eqSettingsManager != null) {
+                    eqSettingsManager.setActiveReceiverIp("");
+                }
+                new Thread(opusClient::close).start();
+                return START_STICKY;
+            }
+
             String newIp = intent.getStringExtra(EXTRA_MANUAL_IP);
-            if (newIp != null && !newIp.equals(manualIp)) {
+            if (newIp != null) {
+                Log.d(TAG, "EXTRA_MANUAL_IP received: " + newIp);
                 manualIp = newIp;
                 if (eqSettingsManager != null) eqSettingsManager.setActiveReceiverIp(newIp);
-                new Thread(audioClient::close).start();
+                new Thread(opusClient::close).start();
             }
 
             Intent resultData = intent.getParcelableExtra("EXTRA_RESULT_DATA");
@@ -443,9 +506,45 @@ public class AudioStreamService extends Service {
         return START_STICKY;
     }
 
+    private AudioRecord createAudioRecord(MediaProjection projection, int sampleRate) {
+        if (projection == null) return null;
+        try {
+            AudioPlaybackCaptureConfiguration config = new AudioPlaybackCaptureConfiguration.Builder(projection)
+                    .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+                    .addMatchingUsage(AudioAttributes.USAGE_GAME)
+                    .build();
+
+            AudioFormat audioFormat = new AudioFormat.Builder()
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(AudioFormat.CHANNEL_IN_STEREO)
+                    .build();
+
+            int minBuf = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
+            int bufferSize = Math.max((minBuf > 0 ? minBuf : 4096) * 8, 65536);
+
+            AudioRecord record = new AudioRecord.Builder()
+                    .setAudioPlaybackCaptureConfig(config)
+                    .setAudioFormat(audioFormat)
+                    .setBufferSizeInBytes(bufferSize)
+                    .build();
+
+            if (record.getState() == AudioRecord.STATE_INITIALIZED) {
+                return record;
+            } else {
+                record.release();
+                return null;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal membuat AudioRecord untuk " + sampleRate + "Hz", e);
+            return null;
+        }
+    }
+
     private void startStreamingProcess(int resultCode, Intent resultData) {
         isStreamingThreadActive = true;
         executorService.execute(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
             try {
                 Thread.sleep(500);
                 updateStatus("Mendapatkan Izin Audio...");
@@ -466,32 +565,33 @@ public class AudioStreamService extends Service {
                     return;
                 }
 
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    try {
+                        startForeground(NOTIFICATION_ID, createNotification(lastStatus), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error promoting FGS to MEDIA_PROJECTION type: ", e);
+                    }
+                }
+
                 mediaProjection.registerCallback(projectionCallback, mainHandler);
 
-                AudioPlaybackCaptureConfiguration config = new AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
-                        .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
-                        .addMatchingUsage(AudioAttributes.USAGE_GAME)
-                        .build();
-
-                AudioFormat audioFormat = new AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(SAMPLE_RATE)
-                        .setChannelMask(AudioFormat.CHANNEL_IN_STEREO)
-                        .build();
-
-                int bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT) * 4;
-                
-                audioRecord = new AudioRecord.Builder()
-                        .setAudioPlaybackCaptureConfig(config)
-                        .setAudioFormat(audioFormat)
-                        .setBufferSizeInBytes(bufferSize)
-                        .build();
-
-                if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
+                int initialSampleRate = (eqSettingsManager != null && eqSettingsManager.getAudioStreamMode() == EqSettingsManager.STREAM_MODE_OPUS) ? 48000 : 44100;
+                audioRecord = createAudioRecord(mediaProjection, initialSampleRate);
+                if (audioRecord == null) {
+                    int fallbackRate = (initialSampleRate == 44100) ? 48000 : 44100;
+                    Log.w(TAG, "AudioRecord gagal untuk " + initialSampleRate + "Hz, mencoba fallback ke " + fallbackRate + "Hz");
+                    audioRecord = createAudioRecord(mediaProjection, fallbackRate);
+                    if (audioRecord != null) {
+                        initialSampleRate = fallbackRate;
+                    }
+                }
+                if (audioRecord == null) {
                     updateStatus("Gagal Inisialisasi AudioRecord");
                     cleanup();
                     return;
                 }
+                currentAudioRecordSampleRate = initialSampleRate;
+                eqProcessor.setSampleRate((float) initialSampleRate);
 
                 // Proteksi Lisensi & Blokir
                 LicenseManager licenseManager = LicenseManager.getInstance(this);
@@ -516,11 +616,21 @@ public class AudioStreamService extends Service {
                     }
 
                     String receiverIp;
+                    String discoveredDeviceName = null;
                     if (manualIp != null && !manualIp.isEmpty()) {
                         receiverIp = manualIp;
+                        try {
+                            discoveredDeviceName = discoveryClient.queryDeviceName(manualIp);
+                        } catch (Exception ignored) {}
                     } else {
                         updateStatus("Mencari Receiver...");
-                        receiverIp = discoveryClient.performDiscovery();
+                        DiscoveryClient.DiscoveryResult dr = discoveryClient.performDiscoveryWithResult();
+                        if (dr != null) {
+                            receiverIp = dr.ip;
+                            discoveredDeviceName = dr.name;
+                        } else {
+                            receiverIp = null;
+                        }
                     }
 
                     if (receiverIp == null) {
@@ -545,6 +655,9 @@ public class AudioStreamService extends Service {
                     if (manualIp == null || manualIp.isEmpty()) {
                         Intent discoveryIntent = new Intent(ACTION_IP_DISCOVERED);
                         discoveryIntent.putExtra(EXTRA_RECEIVER_IP, receiverIp);
+                        if (discoveredDeviceName != null) {
+                            discoveryIntent.putExtra(EXTRA_RECEIVER_NAME, discoveredDeviceName);
+                        }
                         discoveryIntent.setPackage(getPackageName());
                         sendBroadcast(discoveryIntent);
                     }
@@ -552,25 +665,80 @@ public class AudioStreamService extends Service {
                     currentReceiverIp = receiverIp;
                     if (eqSettingsManager != null) eqSettingsManager.setActiveReceiverIp(receiverIp);
                     updateStatus("Menyambung ke " + receiverIp);
-                    if (audioClient.connect(receiverIp, PORT_TCP)) {
-                        String discoveredName = audioClient.performHandshake();
-                        if (discoveredName != null) {
+                    boolean isBroadcast = eqSettingsManager != null && eqSettingsManager.isBroadcastEnabled();
+                    int targetUdpPort = eqSettingsManager != null ? eqSettingsManager.getUdpPort() : PORT_UDP;
+
+                    int streamMode = eqSettingsManager != null ? eqSettingsManager.getAudioStreamMode() : EqSettingsManager.STREAM_MODE_PCM;
+                    int targetSampleRate = (streamMode == EqSettingsManager.STREAM_MODE_OPUS) ? 48000 :
+                            (eqSettingsManager != null ? eqSettingsManager.getEffectiveSampleRate(receiverIp) : 44100);
+
+                    opusClient.setCurrentStreamMode(streamMode);
+                    opusClient.setCurrentSampleRate(targetSampleRate);
+                    eqProcessor.setSampleRate((float) targetSampleRate);
+
+                    if (audioRecord == null || currentAudioRecordSampleRate != targetSampleRate) {
+                        if (audioRecord != null) {
+                            try {
+                                audioRecord.stop();
+                                audioRecord.release();
+                            } catch (Exception ignored) {}
+                            audioRecord = null;
+                        }
+                        audioRecord = createAudioRecord(mediaProjection, targetSampleRate);
+                        if (audioRecord == null) {
+                            int fallbackRate = (targetSampleRate == 44100) ? 48000 : 44100;
+                            Log.w(TAG, "AudioRecord gagal untuk " + targetSampleRate + "Hz, mencoba fallback ke " + fallbackRate + "Hz");
+                            audioRecord = createAudioRecord(mediaProjection, fallbackRate);
+                            if (audioRecord != null) {
+                                targetSampleRate = fallbackRate;
+                                opusClient.setCurrentSampleRate(targetSampleRate);
+                                eqProcessor.setSampleRate((float) targetSampleRate);
+                            }
+                        }
+                        if (audioRecord != null) {
+                            audioRecord.startRecording();
+                            currentAudioRecordSampleRate = targetSampleRate;
+                        } else {
+                            updateStatus("Gagal AudioRecord " + targetSampleRate + "Hz");
+                            cleanup();
+                            return;
+                        }
+                    }
+
+                    if (eqSettingsManager != null) {
+                        opusClient.setCurrentPreset(eqSettingsManager.getOpusPreset());
+                        opusClient.setCurrentBitrate(eqSettingsManager.getOpusBitrate());
+                        opusClient.setCurrentFrameMs(eqSettingsManager.getOpusFrameMs());
+                        opusClient.setCurrentAudioProfile(eqSettingsManager.getOpusProfile());
+                        opusClient.setCurrentFecPercent(eqSettingsManager.getOpusFecPercent());
+                        opusClient.setCurrentQosMode(eqSettingsManager.getOpusQosMode());
+                    }
+                    if (opusClient.connect(receiverIp, targetUdpPort, isBroadcast)) {
+                        if (discoveredDeviceName != null && !discoveredDeviceName.trim().isEmpty() && !discoveredDeviceName.equalsIgnoreCase("Receiver")) {
                             Intent nameIntent = new Intent(ACTION_RECEIVER_NAME_DISCOVERED);
                             nameIntent.putExtra(EXTRA_RECEIVER_IP, receiverIp);
-                            nameIntent.putExtra(EXTRA_RECEIVER_NAME, discoveredName);
+                            nameIntent.putExtra(EXTRA_RECEIVER_NAME, discoveredDeviceName.trim());
                             nameIntent.setPackage(getPackageName());
                             sendBroadcast(nameIntent);
                         }
 
                         // Minta kapabilitas & volume aktual receiver seketika setelah terkoneksi
                         sendMetadataToReceiver("VOL_CAPS_REQ");
+                        sendMetadataToReceiver("REC_HW_REQ");
                         broadcastLicenseStatusToReceiver();
 
                         boolean isFirstDataSent = false;
                         long lastProStatusSentTime = 0;
-                        while (isServiceRunning && audioRecord != null && audioClient.isConnected()) {
-                            int desiredSize = eqSettingsManager != null ? eqSettingsManager.getStreamBufferSize() : 4096;
-                            if (desiredSize <= 0) desiredSize = 4096;
+                        while (isServiceRunning && audioRecord != null && opusClient.isConnected().get()) {
+                            int desiredSize;
+                            if (eqSettingsManager != null && eqSettingsManager.getAudioStreamMode() == EqSettingsManager.STREAM_MODE_OPUS) {
+                                int frameMs = eqSettingsManager.getOpusFrameMs();
+                                if (frameMs != 5 && frameMs != 10 && frameMs != 20 && frameMs != 40) frameMs = 20;
+                                desiredSize = (48000 * frameMs / 1000) * 4;
+                            } else {
+                                desiredSize = eqSettingsManager != null ? eqSettingsManager.getStreamBufferSize() : 4096;
+                                if (desiredSize <= 0) desiredSize = 4096;
+                            }
                             if (buffer.length != desiredSize) {
                                 buffer = new byte[desiredSize];
                             }
@@ -589,22 +757,33 @@ public class AudioStreamService extends Service {
                                 eqProcessor.setAudioEffectsEnabled(dspAllowed && eqSettingsManager.isAudioEffectsEnabled());
 
                                 eqProcessor.processAudio(buffer, read);
-                                if (!audioClient.sendAudio(buffer, 0, read)) break;
+                                if (!opusClient.sendAudio(buffer, 0, read)) break;
                                 
                                 long now = System.currentTimeMillis();
                                 if (now - lastProStatusSentTime >= 2000) {
                                     lastProStatusSentTime = now;
                                     broadcastLicenseStatusToReceiver();
+
+                                    // Heartbeat Watchdog: jika Receiver terputus (> 4500ms tanpa detak jantung)
+                                    if (lastReceiverAliveTimestamp > 0 && (now - lastReceiverAliveTimestamp > 4500)) {
+                                        if (isReceiverConnected) {
+                                            isReceiverConnected = false;
+                                            updateStatus("Receiver Terputus...");
+                                        }
+                                    }
                                 }
 
                                 if (!isFirstDataSent) {
                                     isFirstDataSent = true;
+                                    isReceiverConnected = true;
+                                    lastReceiverAliveTimestamp = System.currentTimeMillis();
                                     updateStatus("STREAMING AKTIF");
                                     broadcastLicenseStatusToReceiver();
                                     // Minta receiver melaporkan kapabilitas volumenya.
                                     // Ini yang membuat sistem ADAPTIF: perangkat baru tidak
                                     // perlu didaftarkan manual, kemampuannya datang sendiri.
                                     sendMetadataToReceiver("VOL_CAPS_REQ");
+                                    sendMetadataToReceiver("REC_HW_REQ");
                                     if (lastMetadataInfo != null) {
                                         new Thread(() -> {
                                             try {
@@ -624,7 +803,7 @@ public class AudioStreamService extends Service {
                             Thread.sleep(2000);
                         }
                     }
-                    audioClient.close();
+                    opusClient.close();
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Global Error: ", e);
@@ -735,6 +914,7 @@ public class AudioStreamService extends Service {
         instance = null;
         isServiceRunning = false;
         isStreamingThreadActive = false;
+        currentAudioRecordSampleRate = 0;
         
         if (audioRecord != null) {
             try { audioRecord.stop(); } catch (Exception ignored) {}
@@ -764,8 +944,10 @@ public class AudioStreamService extends Service {
         }
 
         currentReceiverIp = null;
+        isReceiverConnected = false;
+        lastReceiverAliveTimestamp = 0L;
         metadataSender.close();
-        audioClient.close();
+        opusClient.close();
 
         LicenseManager.getInstance(this).stopSession();
 

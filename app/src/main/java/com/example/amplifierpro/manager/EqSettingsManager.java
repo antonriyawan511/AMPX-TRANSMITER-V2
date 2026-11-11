@@ -25,6 +25,7 @@ public class EqSettingsManager {
     private static final String KEY_PRESET_PREFIX = "eq_preset_";
     private static final String KEY_STEREO_WIDTH_ENABLED = "stereo_width_enabled";
     private static final String KEY_STEREO_WIDTH_VALUE = "stereo_width_value";
+    public static final String KEY_STEREO_CUTOFF_FREQ = "stereo_cutoff_freq";
     private static final String KEY_VIRTUAL_BASS_ENABLED = "virtual_bass_enabled";
     private static final String KEY_VIRTUAL_BASS_AMOUNT = "virtual_bass_amount";
     private static final String KEY_VIRTUAL_BASS_MIN_FREQ = "virtual_bass_min_freq";
@@ -97,10 +98,37 @@ public class EqSettingsManager {
     public static final float[] PEQ_MIN_FREQS = {20f, 80f, 400f, 1500f};
     public static final float[] PEQ_MAX_FREQS = {200f, 1000f, 6000f, 20000f};
     
+    public static final int STREAM_MODE_PCM = 0; // Uncompressed PCM bit-perfect
+    public static final int STREAM_MODE_OPUS = 1; // Compressed Opus 48 kHz
+
+    public static final int SAMPLE_RATE_MODE_AUTO = 0; // Otomatis (sesuai DAC receiver)
+    public static final int SAMPLE_RATE_MODE_44K = 1;  // 44.1 kHz
+    public static final int SAMPLE_RATE_MODE_48K = 2;  // 48.0 kHz
+
+    public static final String KEY_AUDIO_STREAM_MODE = "audio_stream_mode";
+    public static final String KEY_PCM_SAMPLE_RATE_MODE = "pcm_sample_rate_mode";
+
+    private static final String KEY_REC_HW_NATIVE_SR_PREFIX = "rec_hw_native_sr_";
+    private static final String KEY_REC_HW_SUPPORTED_PREFIX = "rec_hw_supported_";
+    private static final String KEY_REC_HW_MODEL_PREFIX = "rec_hw_model_";
+    private static final String KEY_REC_HW_HAL_PREFIX = "rec_hw_hal_";
+
+    public static final String ACTION_AUDIO_STREAM_MODE_CHANGED = "com.example.amplifierpro.ACTION_AUDIO_STREAM_MODE_CHANGED";
+    public static final String ACTION_RECEIVER_HW_CHANGED = "com.example.amplifierpro.ACTION_RECEIVER_HW_CHANGED";
+    public static final String ACTION_RECEIVER_HW_REQ = "com.example.amplifierpro.RECEIVER_HW_REQ";
+
+    public static final String EXTRA_STREAM_MODE = "extra_stream_mode";
+    public static final String EXTRA_SAMPLE_RATE_MODE = "extra_sample_rate_mode";
+    public static final String EXTRA_REC_HW_NATIVE_SR = "extra_rec_hw_native_sr";
+    public static final String EXTRA_REC_HW_SUPPORTED = "extra_rec_hw_supported";
+    public static final String EXTRA_REC_HW_MODEL = "extra_rec_hw_model";
+    public static final String EXTRA_REC_HW_HAL = "extra_rec_hw_hal";
+
     public static final String EXTRA_TARGET = "target";
     public static final String EXTRA_BAND_INDEX = "band_index";
     public static final String EXTRA_VALUE = "value";
     public static final String EXTRA_ENABLED = "enabled";
+    public static final String EXTRA_STEREO_CUTOFF = "stereo_cutoff";
     public static final String EXTRA_MIN_FREQ = "min_freq";
     public static final String EXTRA_MAX_FREQ = "max_freq";
     public static final String EXTRA_THRESHOLD = "threshold";
@@ -657,6 +685,7 @@ public class EqSettingsManager {
         android.content.Intent intent = new android.content.Intent(ACTION_STEREO_WIDTH_UPDATED);
         intent.putExtra(EXTRA_ENABLED, enabled);
         intent.putExtra(EXTRA_VALUE, getStereoWidthValue());
+        intent.putExtra(EXTRA_STEREO_CUTOFF, getStereoCutoffFreq());
         intent.setPackage(context.getPackageName());
         context.sendBroadcast(intent);
     }
@@ -671,6 +700,22 @@ public class EqSettingsManager {
         android.content.Intent intent = new android.content.Intent(ACTION_STEREO_WIDTH_UPDATED);
         intent.putExtra(EXTRA_ENABLED, isStereoWidthEnabled());
         intent.putExtra(EXTRA_VALUE, value);
+        intent.putExtra(EXTRA_STEREO_CUTOFF, getStereoCutoffFreq());
+        intent.setPackage(context.getPackageName());
+        context.sendBroadcast(intent);
+    }
+
+    public int getStereoCutoffFreq() {
+        return prefs.getInt(KEY_STEREO_CUTOFF_FREQ, 120);
+    }
+
+    public void setStereoCutoffFreq(int cutoffHz) {
+        prefs.edit().putInt(KEY_STEREO_CUTOFF_FREQ, cutoffHz).apply();
+        
+        android.content.Intent intent = new android.content.Intent(ACTION_STEREO_WIDTH_UPDATED);
+        intent.putExtra(EXTRA_ENABLED, isStereoWidthEnabled());
+        intent.putExtra(EXTRA_VALUE, getStereoWidthValue());
+        intent.putExtra(EXTRA_STEREO_CUTOFF, cutoffHz);
         intent.setPackage(context.getPackageName());
         context.sendBroadcast(intent);
     }
@@ -897,20 +942,23 @@ public class EqSettingsManager {
 
     /** Dipanggil saat receiver melaporkan kapabilitasnya (VOL_CAPS). */
     public void setReceiverVolumeCaps(String ip, int max, int current) {
-        if (ip == null || ip.isEmpty() || max <= 0) return;
+        if (ip == null || ip.trim().isEmpty() || max <= 0) return;
+        String cleanIp = ip.trim();
         int clamped = Math.max(0, Math.min(current, max));
+        int percent = (int) Math.round(clamped * 100.0 / max);
         prefs.edit()
-                .putInt(KEY_RECEIVER_VOLMAX_PREFIX + ip, max)
-                .putInt(KEY_RECEIVER_VOL_PREFIX + ip, clamped)
-                .putInt(KEY_RECEIVER_VOLUME, (int) Math.round(clamped * 100.0 / max))
+                .putString(KEY_ACTIVE_RECEIVER_IP, cleanIp)
+                .putInt(KEY_RECEIVER_VOLMAX_PREFIX + cleanIp, max)
+                .putInt(KEY_RECEIVER_VOL_PREFIX + cleanIp, clamped)
+                .putInt(KEY_RECEIVER_VOLUME, percent)
                 .apply();
-        notifyReceiverVolumeUpdated(clamped, max, ip);
+        notifyReceiverVolumeUpdated(clamped, max, cleanIp);
     }
 
     /** Index step volume tersimpan untuk receiver tsb (fallback: warisan nilai lama). */
     public int getReceiverVolumeIndex(String ip) {
-        if (ip == null || ip.isEmpty()) return prefs.getInt(KEY_RECEIVER_VOLUME, 0);
-        if (prefs.contains(KEY_RECEIVER_VOL_PREFIX + ip)) {
+        if (ip == null || ip.trim().isEmpty()) ip = getActiveReceiverIp();
+        if (ip != null && !ip.isEmpty() && prefs.contains(KEY_RECEIVER_VOL_PREFIX + ip)) {
             return prefs.getInt(KEY_RECEIVER_VOL_PREFIX + ip, 0);
         }
         return prefs.getInt(KEY_RECEIVER_VOLUME, 0);
@@ -918,14 +966,25 @@ public class EqSettingsManager {
 
     /** Simpan volume (index step) untuk receiver tsb, tanpa mengirim perintah. */
     public void setReceiverVolumeIndex(String ip, int index) {
-        if (ip == null || ip.isEmpty()) return;
-        int max = getReceiverVolMax(ip);
-        int clamped = max > 0 ? Math.max(0, Math.min(index, max)) : Math.max(0, index);
-        int percent = max > 0 ? (int) Math.round(clamped * 100.0 / max) : Math.max(0, Math.min(100, index));
-        prefs.edit()
-                .putInt(KEY_RECEIVER_VOL_PREFIX + ip, clamped)
-                .putInt(KEY_RECEIVER_VOLUME, percent)
-                .apply();
+        if (ip == null || ip.trim().isEmpty()) ip = getActiveReceiverIp();
+        if (ip == null || ip.trim().isEmpty()) return;
+        String cleanIp = ip.trim();
+        int max = getReceiverVolMax(cleanIp);
+        if (max > 0) {
+            int clamped = Math.max(0, Math.min(index, max));
+            int percent = (int) Math.round(clamped * 100.0 / max);
+            prefs.edit()
+                    .putString(KEY_ACTIVE_RECEIVER_IP, cleanIp)
+                    .putInt(KEY_RECEIVER_VOL_PREFIX + cleanIp, clamped)
+                    .putInt(KEY_RECEIVER_VOLUME, percent)
+                    .apply();
+        } else {
+            int percent = Math.max(0, Math.min(100, index));
+            prefs.edit()
+                    .putString(KEY_ACTIVE_RECEIVER_IP, cleanIp)
+                    .putInt(KEY_RECEIVER_VOLUME, percent)
+                    .apply();
+        }
     }
 
     /**
@@ -933,48 +992,104 @@ public class EqSettingsManager {
      * Dihitung dari index/max yang sebenarnya, sehingga tidak ada selisih dengan perangkat.
      */
     public int getReceiverVolumePercent(String ip) {
+        if (ip == null || ip.trim().isEmpty()) {
+            ip = getActiveReceiverIp();
+        }
         int max = getReceiverVolMax(ip);
         if (max <= 0) {
-            if (ip != null && !ip.isEmpty() && prefs.contains(KEY_RECEIVER_VOL_PREFIX + ip)) {
-                return prefs.getInt(KEY_RECEIVER_VOL_PREFIX + ip, getReceiverVolume());
-            }
             return getReceiverVolume();
         }
         int idx = getReceiverVolumeIndex(ip);
         return (int) Math.round(idx * 100.0 / max);
     }
 
-    /** Diterima dari receiver (REC_VOL:<index>:<max> atau REC_VOL:<persen>). Tidak dikirim balik (anti-loop). */
+    /** Diterima dari receiver (REC_VOL_PCT:<persen>). Penimpaan absolut tanpa kalkulasi. */
+    public void applyReceiverVolumePercentReport(String ip, int percent) {
+        if (ip == null || ip.trim().isEmpty()) return;
+        String cleanIp = ip.trim();
+        
+        int clampedPercent = Math.max(0, Math.min(100, percent));
+        int max = getReceiverVolMax(cleanIp);
+        int approxIndex = max > 0 ? (int) Math.round(clampedPercent * max / 100.0) : 0;
+
+        prefs.edit()
+                .putString(KEY_ACTIVE_RECEIVER_IP, cleanIp)
+                .putInt(KEY_RECEIVER_VOLUME, clampedPercent)
+                .putInt(KEY_RECEIVER_VOL_PREFIX + cleanIp, approxIndex)
+                .apply();
+                
+        // Broadcast the percentage directly
+        android.content.Intent intent = new android.content.Intent(ACTION_RECEIVER_VOLUME_UPDATED);
+        intent.putExtra(EXTRA_VALUE, clampedPercent);
+        intent.putExtra(EXTRA_RECEIVER_VOL_MAX, 0); // Mark as percentage (max = 0)
+        intent.putExtra(EXTRA_RECEIVER_IP, cleanIp);
+        intent.putExtra(EXTRA_FROM_RECEIVER, true);
+        intent.setPackage(context.getPackageName());
+        context.sendBroadcast(intent);
+    }
+
+    /**
+     * Guard urutan umpan balik: paket dengan seq <= yang sudah diterapkan dibuang.
+     * Mengatasi duplikasi UDP (receiver mengirim tiap paket 2x) dan reorder paket WiFi,
+     * yang sebelumnya membuat laporan STALE menimpa nilai yang lebih baru di UI TX.
+     */
+    private static volatile long sLastAppliedVolSeq = 0L;
+
+    private static boolean shouldApplyVolFeedback(long seq) {
+        if (seq <= 0) return true; // pesan legacy tanpa seq: selalu terapkan
+        synchronized (EqSettingsManager.class) {
+            if (seq <= sLastAppliedVolSeq) return false;
+            sLastAppliedVolSeq = seq;
+            return true;
+        }
+    }
+
+    /** Versi ber-seq (REC_VOL:<index>:<max>:<seq>): lossless & anti-stale. */
+    public void applyReceiverVolumeReport(String ip, int index, int max, long seq) {
+        if (!shouldApplyVolFeedback(seq)) return;
+        applyReceiverVolumeReport(ip, index, max);
+    }
+
+    /** Versi ber-seq (VOL_CAPS:<max>:<current>:<seq>): anti-stale. */
+    public void setReceiverVolumeCaps(String ip, int max, int current, long seq) {
+        if (!shouldApplyVolFeedback(seq)) return;
+        setReceiverVolumeCaps(ip, max, current);
+    }
+
+    /** Diterima dari receiver (REC_VOL:<index>:<max>). Fallback untuk legacy receiver. */
     public void applyReceiverVolumeReport(String ip, int index, int max) {
-        if (ip == null || ip.isEmpty()) return;
+        if (ip == null || ip.trim().isEmpty()) return;
+        String cleanIp = ip.trim();
         if (max > 0) {
             int clamped = Math.max(0, Math.min(index, max));
             int percent = (int) Math.round(clamped * 100.0 / max);
             prefs.edit()
-                    .putInt(KEY_RECEIVER_VOLMAX_PREFIX + ip, max)
-                    .putInt(KEY_RECEIVER_VOL_PREFIX + ip, clamped)
+                    .putString(KEY_ACTIVE_RECEIVER_IP, cleanIp)
+                    .putInt(KEY_RECEIVER_VOLMAX_PREFIX + cleanIp, max)
+                    .putInt(KEY_RECEIVER_VOL_PREFIX + cleanIp, clamped)
                     .putInt(KEY_RECEIVER_VOLUME, percent)
                     .apply();
+            notifyReceiverVolumeUpdated(clamped, max, cleanIp);
         } else {
             // Format lama: index adalah persen (0..100)
-            int existingMax = getReceiverVolMax(ip);
+            int existingMax = getReceiverVolMax(cleanIp);
             if (existingMax > 0) {
                 int stepIndex = (int) Math.round(index * existingMax / 100.0);
                 stepIndex = Math.max(0, Math.min(stepIndex, existingMax));
                 prefs.edit()
-                        .putInt(KEY_RECEIVER_VOL_PREFIX + ip, stepIndex)
+                        .putString(KEY_ACTIVE_RECEIVER_IP, cleanIp)
+                        .putInt(KEY_RECEIVER_VOL_PREFIX + cleanIp, stepIndex)
                         .putInt(KEY_RECEIVER_VOLUME, Math.max(0, Math.min(100, index)))
                         .apply();
-                index = stepIndex;
-                max = existingMax;
+                notifyReceiverVolumeUpdated(stepIndex, existingMax, cleanIp);
             } else {
                 prefs.edit()
-                        .putInt(KEY_RECEIVER_VOL_PREFIX + ip, Math.max(0, Math.min(100, index)))
+                        .putString(KEY_ACTIVE_RECEIVER_IP, cleanIp)
                         .putInt(KEY_RECEIVER_VOLUME, Math.max(0, Math.min(100, index)))
                         .apply();
+                notifyReceiverVolumeUpdated(Math.max(0, Math.min(100, index)), 0, cleanIp);
             }
         }
-        notifyReceiverVolumeUpdated(index, max, ip);
     }
 
     private void notifyReceiverVolumeUpdated(int index, int max, String ip) {
@@ -1079,5 +1194,142 @@ public class EqSettingsManager {
             }
         };
         saveHandler.postDelayed(saveRunnable, 500);
+    }
+
+    public boolean isBroadcastEnabled() {
+        return prefs.getBoolean("opus_broadcast_enabled", false);
+    }
+    public void setBroadcastEnabled(boolean enabled) {
+        prefs.edit().putBoolean("opus_broadcast_enabled", enabled).apply();
+    }
+    public int getUdpPort() {
+        return prefs.getInt("opus_udp_port", 5000);
+    }
+    public void setUdpPort(int port) {
+        prefs.edit().putInt("opus_udp_port", port).apply();
+    }
+    public int getOpusPreset() {
+        return prefs.getInt("opus_preset", 0);
+    }
+    public void setOpusPreset(int preset) {
+        prefs.edit().putInt("opus_preset", preset).apply();
+    }
+    public int getOpusBitrate() {
+        return prefs.getInt("opus_bitrate", 96000);
+    }
+    public void setOpusBitrate(int bitrate) {
+        prefs.edit().putInt("opus_bitrate", bitrate).apply();
+    }
+    public int getOpusFrameMs() {
+        return prefs.getInt("opus_frame_ms", 20);
+    }
+    public void setOpusFrameMs(int ms) {
+        prefs.edit().putInt("opus_frame_ms", ms).apply();
+    }
+    public int getOpusProfile() {
+        return prefs.getInt("opus_profile", 0);
+    }
+    public void setOpusProfile(int profile) {
+        prefs.edit().putInt("opus_profile", profile).apply();
+    }
+    public int getOpusFecPercent() {
+        return prefs.getInt("opus_fec_percent", 0);
+    }
+    public void setOpusFecPercent(int fec) {
+        prefs.edit().putInt("opus_fec_percent", fec).apply();
+    }
+    public int getOpusQosMode() {
+        return prefs.getInt("opus_qos_mode", 1);
+    }
+    public void setOpusQosMode(int qos) {
+        prefs.edit().putInt("opus_qos_mode", qos).apply();
+    }
+
+    public int getAudioStreamMode() {
+        return prefs.getInt(KEY_AUDIO_STREAM_MODE, STREAM_MODE_PCM);
+    }
+
+    public void setAudioStreamMode(int mode) {
+        prefs.edit().putInt(KEY_AUDIO_STREAM_MODE, mode).apply();
+        android.content.Intent intent = new android.content.Intent(ACTION_AUDIO_STREAM_MODE_CHANGED);
+        intent.putExtra(EXTRA_STREAM_MODE, mode);
+        intent.setPackage(context.getPackageName());
+        context.sendBroadcast(intent);
+    }
+
+    public int getPcmSampleRateMode() {
+        return prefs.getInt(KEY_PCM_SAMPLE_RATE_MODE, SAMPLE_RATE_MODE_AUTO);
+    }
+
+    public void setPcmSampleRateMode(int mode) {
+        prefs.edit().putInt(KEY_PCM_SAMPLE_RATE_MODE, mode).apply();
+        android.content.Intent intent = new android.content.Intent(ACTION_AUDIO_STREAM_MODE_CHANGED);
+        intent.putExtra(EXTRA_SAMPLE_RATE_MODE, mode);
+        intent.setPackage(context.getPackageName());
+        context.sendBroadcast(intent);
+    }
+
+    public void saveReceiverHwCaps(String ip, int nativeSr, String supportedRatesCsv, String model, String halType) {
+        if (ip == null || ip.isEmpty()) return;
+        int prevSr = prefs.getInt(KEY_REC_HW_NATIVE_SR_PREFIX + ip, -1);
+        prefs.edit()
+                .putInt(KEY_REC_HW_NATIVE_SR_PREFIX + ip, nativeSr)
+                .putString(KEY_REC_HW_SUPPORTED_PREFIX + ip, supportedRatesCsv != null ? supportedRatesCsv : "")
+                .putString(KEY_REC_HW_MODEL_PREFIX + ip, model != null ? model : "")
+                .putString(KEY_REC_HW_HAL_PREFIX + ip, halType != null ? halType : "")
+                .apply();
+
+        android.content.Intent intent = new android.content.Intent(ACTION_RECEIVER_HW_CHANGED);
+        intent.putExtra(EXTRA_RECEIVER_IP, ip);
+        intent.putExtra(EXTRA_REC_HW_NATIVE_SR, nativeSr);
+        intent.putExtra(EXTRA_REC_HW_SUPPORTED, supportedRatesCsv);
+        intent.putExtra(EXTRA_REC_HW_MODEL, model);
+        intent.putExtra(EXTRA_REC_HW_HAL, halType);
+        intent.setPackage(context.getPackageName());
+        context.sendBroadcast(intent);
+
+        if (prevSr != nativeSr && getAudioStreamMode() == STREAM_MODE_PCM && getPcmSampleRateMode() == SAMPLE_RATE_MODE_AUTO) {
+            android.content.Intent modeIntent = new android.content.Intent(ACTION_AUDIO_STREAM_MODE_CHANGED);
+            modeIntent.putExtra(EXTRA_SAMPLE_RATE_MODE, SAMPLE_RATE_MODE_AUTO);
+            modeIntent.setPackage(context.getPackageName());
+            context.sendBroadcast(modeIntent);
+        }
+    }
+
+    public int getReceiverNativeSampleRate(String ip) {
+        if (ip == null || ip.isEmpty()) return 44100;
+        return prefs.getInt(KEY_REC_HW_NATIVE_SR_PREFIX + ip, 44100);
+    }
+
+    public String getReceiverSupportedRates(String ip) {
+        if (ip == null || ip.isEmpty()) return "44100, 48000";
+        return prefs.getString(KEY_REC_HW_SUPPORTED_PREFIX + ip, "44100, 48000");
+    }
+
+    public String getReceiverModel(String ip) {
+        if (ip == null || ip.isEmpty()) return "Receiver";
+        return prefs.getString(KEY_REC_HW_MODEL_PREFIX + ip, "Receiver");
+    }
+
+    public String getReceiverHalType(String ip) {
+        if (ip == null || ip.isEmpty()) return "AudioTrack HAL";
+        return prefs.getString(KEY_REC_HW_HAL_PREFIX + ip, "AudioTrack HAL");
+    }
+
+    public int getEffectiveSampleRate(String ip) {
+        int mode = getPcmSampleRateMode();
+        if (mode == SAMPLE_RATE_MODE_44K) {
+            return 44100;
+        } else if (mode == SAMPLE_RATE_MODE_48K) {
+            return 48000;
+        } else {
+            return getReceiverNativeSampleRate(ip);
+        }
+    }
+
+    public void requestReceiverHardwareCaps() {
+        android.content.Intent intent = new android.content.Intent(ACTION_RECEIVER_HW_REQ);
+        intent.setPackage(context.getPackageName());
+        context.sendBroadcast(intent);
     }
 }

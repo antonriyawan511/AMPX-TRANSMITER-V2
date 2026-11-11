@@ -45,7 +45,9 @@
             android:name=".ui.TransmitterActivity"
             android:exported="true"
             android:label=""
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:theme="@style/Theme.AMPLIFIERPRO"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

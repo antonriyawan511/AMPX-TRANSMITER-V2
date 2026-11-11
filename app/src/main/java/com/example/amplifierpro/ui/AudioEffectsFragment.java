@@ -70,6 +70,7 @@ public class AudioEffectsFragment extends Fragment implements ThemeManager.OnThe
     private SeekBar seekBarStereoWidth;
     private TextView textStereoWidthValue;
     private TextView textStereoWidthLabel;
+    private Spinner spinnerStereoCutoff;
 
     // Virtual Bass
     private SwitchCompat switchVirtualBass;
@@ -184,6 +185,26 @@ public class AudioEffectsFragment extends Fragment implements ThemeManager.OnThe
             // Disable all interaction inside cards when global toggle is off
             disableViewAndChildren(card, enabled);
         }
+        if (enabled) {
+            // Restore proper switch states for child controls so disabled switches stay disabled
+            if (switchStereoWidth != null) {
+                boolean isStereo = switchStereoWidth.isChecked();
+                if (seekBarStereoWidth != null) seekBarStereoWidth.setEnabled(isStereo);
+                if (spinnerStereoCutoff != null) spinnerStereoCutoff.setEnabled(isStereo);
+            }
+            if (switchVirtualBass != null) {
+                boolean isVb = switchVirtualBass.isChecked();
+                if (seekBarVirtualBass != null) seekBarVirtualBass.setEnabled(isVb);
+                if (spinnerVbMinFreq != null) spinnerVbMinFreq.setEnabled(isVb);
+                if (spinnerVbMaxFreq != null) spinnerVbMaxFreq.setEnabled(isVb);
+            }
+            if (switchCompressor != null) {
+                enableCompressorControls(switchCompressor.isChecked());
+            }
+            if (switchLimiter != null) {
+                enableLimiterControls(switchLimiter.isChecked());
+            }
+        }
     }
 
     private void disableViewAndChildren(View view, boolean enabled) {
@@ -201,6 +222,7 @@ public class AudioEffectsFragment extends Fragment implements ThemeManager.OnThe
         seekBarStereoWidth = view.findViewById(R.id.seekBarStereoWidth);
         textStereoWidthValue = view.findViewById(R.id.textStereoWidthValue);
         textStereoWidthLabel = view.findViewById(R.id.textStereoWidthLabel);
+        spinnerStereoCutoff = view.findViewById(R.id.spinnerStereoCutoff);
     }
 
     private void initVirtualBassUI(View view) {
@@ -351,6 +373,7 @@ public class AudioEffectsFragment extends Fragment implements ThemeManager.OnThe
         }
 
         Spinner[] spinners = new Spinner[]{
+            spinnerStereoCutoff,
             spinnerVbMinFreq, spinnerVbMaxFreq,
             spinnerCompPreset,
             spinnerLimiterPreset, spinnerLimiterReleaseMode
@@ -569,10 +592,81 @@ public class AudioEffectsFragment extends Fragment implements ThemeManager.OnThe
         
         SeekBar parentLayout = seekBarStereoWidth;
         if (parentLayout != null) parentLayout.setEnabled(isEnabled);
+        if (spinnerStereoCutoff != null) spinnerStereoCutoff.setEnabled(isEnabled);
+
+        final int[] cutoffValues = {0, 80, 120, 160, 200, 250};
+        final String[] cutoffLabels = {
+            "Normal (Full)",
+            "Mono < 80 Hz",
+            "Mono < 120 Hz",
+            "Mono < 160 Hz",
+            "Mono < 200 Hz",
+            "Mono < 250 Hz"
+        };
+
+        if (spinnerStereoCutoff != null) {
+            ArrayAdapter<String> cutoffAdapter = new ArrayAdapter<String>(requireContext(), android.R.layout.simple_spinner_item, cutoffLabels) {
+                @NonNull
+                @Override
+                public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                    View v = super.getView(position, convertView, parent);
+                    if (v instanceof TextView) {
+                        ((TextView) v).setTextSize(10.5f);
+                        ((TextView) v).setTextColor(Color.WHITE);
+                        ((TextView) v).setSingleLine(true);
+                    }
+                    return v;
+                }
+
+                @Override
+                public View getDropDownView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                    View v = super.getDropDownView(position, convertView, parent);
+                    if (v instanceof TextView) {
+                        ((TextView) v).setTextSize(12.5f);
+                        if (getContext() != null) {
+                            int saved = settingsManager.getStereoCutoffFreq();
+                            if (cutoffValues[position] == saved) {
+                                ((TextView) v).setTextColor(ThemeManager.getInstance(getContext()).getCurrentTheme().accentColor);
+                            } else {
+                                ((TextView) v).setTextColor(Color.WHITE);
+                            }
+                        }
+                    }
+                    return v;
+                }
+            };
+            cutoffAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinnerStereoCutoff.setAdapter(cutoffAdapter);
+
+            int savedCutoff = settingsManager.getStereoCutoffFreq();
+            int selectedIndex = 2; // Default Mono < 120 Hz
+            for (int i = 0; i < cutoffValues.length; i++) {
+                if (cutoffValues[i] == savedCutoff) {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+            spinnerStereoCutoff.setSelection(selectedIndex);
+
+            spinnerStereoCutoff.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    int chosenCutoff = cutoffValues[position];
+                    if (chosenCutoff != settingsManager.getStereoCutoffFreq()) {
+                        settingsManager.setStereoCutoffFreq(chosenCutoff);
+                        spinnerStereoCutoff.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
+            });
+        }
 
         switchStereoWidth.setOnCheckedChangeListener((buttonView, isChecked) -> {
             settingsManager.setStereoWidthEnabled(isChecked);
             seekBarStereoWidth.setEnabled(isChecked);
+            if (spinnerStereoCutoff != null) spinnerStereoCutoff.setEnabled(isChecked);
         });
 
         seekBarStereoWidth.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {

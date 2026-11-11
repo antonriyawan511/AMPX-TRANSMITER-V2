@@ -2,27 +2,27 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="0dp"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:layout_weight="1"
     android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:paddingVertical="2dp"
+    android:paddingVertical="1dp"
     android:clipChildren="false"
     android:clipToPadding="false">
 
     <TextView
         android:id="@+id/tvGainValue"
         android:layout_width="match_parent"
-        android:layout_height="20dp"
+        android:layout_height="18dp"
         android:layout_marginHorizontal="2dp"
-        android:layout_marginBottom="2dp"
+        android:layout_marginBottom="1dp"
         android:elevation="2dp"
         android:text="0dB"
         android:textColor="@color/accent_green"
         android:textSize="9sp"
         android:textStyle="bold"
         android:paddingHorizontal="1dp"
-        android:paddingVertical="1dp"
+        android:paddingVertical="0dp"
         android:gravity="center"
         android:singleLine="true"
         android:maxLines="1"
@@ -31,16 +31,17 @@
         android:includeFontPadding="false"
         tools:ignore="SmallSp" />
 
-    <FrameLayout
-        android:layout_width="36dp"
-        android:layout_height="140dp"
-        android:layout_marginBottom="2dp"
-        android:clipChildren="true"
-        android:clipToPadding="true">
+    <com.example.amplifierpro.ui.AutoVerticalSeekBarLayout
+        android:id="@+id/frameSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <SeekBar
             android:id="@+id/seekBarBand"
-            android:layout_width="140dp"
+            android:layout_width="120dp"
             android:layout_height="36dp"
             android:layout_gravity="center"
             android:max="24"
@@ -49,19 +50,20 @@
             android:splitTrack="false"
             android:progressTint="@color/accent_green"
             android:thumbTint="@color/white" />
-    </FrameLayout>
+    </com.example.amplifierpro.ui.AutoVerticalSeekBarLayout>
 
     <TextView
         android:id="@+id/tvFrequency"
         android:layout_width="match_parent"
-        android:layout_height="20dp"
+        android:layout_height="18dp"
         android:layout_marginHorizontal="2dp"
+        android:layout_marginTop="1dp"
         android:elevation="2dp"
         android:text="100Hz"
         android:textColor="@color/white"
         android:textSize="10sp"
         android:paddingHorizontal="1dp"
-        android:paddingVertical="1dp"
+        android:paddingVertical="0dp"
         android:gravity="center"
         android:singleLine="true"
         android:maxLines="1"

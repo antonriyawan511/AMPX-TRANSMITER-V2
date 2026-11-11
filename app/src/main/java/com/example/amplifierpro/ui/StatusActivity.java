@@ -6,6 +6,7 @@ import com.example.amplifierpro.network.MetadataSender;
 import com.example.amplifierpro.R;
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.graphics.Color;
 import android.content.Context;
 import android.content.Intent;
@@ -120,7 +121,6 @@ public class StatusActivity extends AppCompatActivity implements ThemeManager.On
         if (btnSendRadioToReceiver != null) {
             btnSendRadioToReceiver.setOnClickListener(v -> showSendRadioDialog());
         }
-        setupLatencyPresetUI();
         radioMetadataSender.open();
 
         requestServiceStatus();
@@ -177,7 +177,7 @@ public class StatusActivity extends AppCompatActivity implements ThemeManager.On
         setupItem(R.id.statusBatteryOpt, "Battery Optimization", "Background stability");
         setupItem(R.id.statusAudioPermission, "Audio Permission", "Internal sound capture");
         setupItem(R.id.statusLocation, "Location / Nearby", "WiFi signal monitoring");
-        setupItem(R.id.statusTcpConnection, "TCP Connection", "Audio stream status");
+        setupItem(R.id.statusTcpConnection, "UDP Stream (Opus 48kHz)", "Audio stream status");
         setupItem(R.id.statusMetadata, "Current Metadata", "Title parsing status");
     }
 
@@ -187,12 +187,35 @@ public class StatusActivity extends AppCompatActivity implements ThemeManager.On
         ((TextView) view.findViewById(R.id.tvDescription)).setText(desc);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (isNotificationServiceEnabled() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                android.service.notification.NotificationListenerService.requestRebind(
+                    new ComponentName(this, MetaListenerService.class)
+                );
+            } catch (Exception ignored) {}
+        }
+        requestServiceStatus();
+        updateDiagnosticUI();
+        handler.removeCallbacks(statusChecker);
+        handler.post(statusChecker);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        handler.removeCallbacks(statusChecker);
+    }
+
     private void startStatusChecker() {
         statusChecker = new Runnable() {
             @Override
             public void run() {
                 updateDiagnosticUI();
-                handler.postDelayed(this, 2000);
+                requestServiceStatus();
+                handler.postDelayed(this, 1500);
             }
         };
         handler.post(statusChecker);
@@ -371,43 +394,6 @@ public class StatusActivity extends AppCompatActivity implements ThemeManager.On
         finishWithAnimation();
     }
 
-    private void setupLatencyPresetUI() {
-        RadioGroup rgLatency = findViewById(R.id.rgLatencyPreset);
-        RadioButton rbUltraLow = findViewById(R.id.rbLatencyUltraLow);
-        RadioButton rbBalanced = findViewById(R.id.rbLatencyBalanced);
-        RadioButton rbHigh = findViewById(R.id.rbLatencyHigh);
-
-        if (rgLatency == null) return;
-
-        EqSettingsManager settingsManager = new EqSettingsManager(this);
-        int currentBuffer = settingsManager.getStreamBufferSize();
-
-        if (currentBuffer <= 2048) {
-            if (rbUltraLow != null) rbUltraLow.setChecked(true);
-        } else if (currentBuffer >= 8192) {
-            if (rbHigh != null) rbHigh.setChecked(true);
-        } else {
-            if (rbBalanced != null) rbBalanced.setChecked(true);
-        }
-
-        rgLatency.setOnCheckedChangeListener((group, checkedId) -> {
-            int newSize;
-            String message;
-            if (checkedId == R.id.rbLatencyUltraLow) {
-                newSize = 2048;
-                message = "🚀 Latensi Ultra-Low (~11ms) Diaktifkan";
-            } else if (checkedId == R.id.rbLatencyHigh) {
-                newSize = 8192;
-                message = "🛡️ High Buffer (~46ms) Diaktifkan";
-            } else {
-                newSize = 4096;
-                message = "⚡ Balanced Latency (~23ms) Diaktifkan";
-            }
-            settingsManager.setStreamBufferSize(newSize);
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-        });
-    }
-
     @Override
     public void onThemeChanged(ThemePalette theme) {
         if (theme == null) return;
@@ -416,26 +402,16 @@ public class StatusActivity extends AppCompatActivity implements ThemeManager.On
 
         TextView tv1 = findViewById(R.id.tvHeaderRealtimeMonitor);
         TextView tv2 = findViewById(R.id.tvHeaderSystemDiagnostics);
-        TextView tv3 = findViewById(R.id.tvHeaderLatencyPreset);
         TextView tv4 = findViewById(R.id.tvHeaderRadioPush);
 
         if (tv1 != null) tv1.setTextColor(accent);
         if (tv2 != null) tv2.setTextColor(accent);
-        if (tv3 != null) tv3.setTextColor(accent);
         if (tv4 != null) tv4.setTextColor(accent);
 
         if (tvRttLatencyStats != null) tvRttLatencyStats.setTextColor(accent);
 
         TextView tvWatermark = findViewById(R.id.tvWatermarkDiag);
         if (tvWatermark != null) tvWatermark.setTextColor(accent);
-
-        RadioButton rb1 = findViewById(R.id.rbLatencyUltraLow);
-        RadioButton rb2 = findViewById(R.id.rbLatencyBalanced);
-        RadioButton rb3 = findViewById(R.id.rbLatencyHigh);
-
-        if (rb1 != null) rb1.setButtonTintList(csl);
-        if (rb2 != null) rb2.setButtonTintList(csl);
-        if (rb3 != null) rb3.setButtonTintList(csl);
 
         if (btnSendRadioToReceiver != null) {
             btnSendRadioToReceiver.setBackgroundTintList(csl);

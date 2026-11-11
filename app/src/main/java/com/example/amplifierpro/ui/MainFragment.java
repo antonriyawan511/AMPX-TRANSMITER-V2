@@ -13,6 +13,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.ComponentName;
+import android.provider.Settings;
+import java.net.InetAddress;
+import java.net.Inet4Address;
+import java.net.NetworkInterface;
+import java.net.InterfaceAddress;
+import java.util.Enumeration;
 import android.graphics.Color;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
@@ -82,12 +89,14 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
     private TextView tvStatus;
     private TextView tvWifiSignal;
     private EditText etManualIpMain;
-    private Button btnOkIp, btnScanQrMain, btnAutoDiscoverMain;
+    private Button btnOkIp, btnScanQrMain, btnHotspotMain, btnAutoDiscoverMain;
     private LinearLayout layoutSavedIps;
     private androidx.core.widget.NestedScrollView mainScrollView;
     private TextView tvSavedReceiversLabel;
     private TextView badgeHiFi;
     private TextView btnUpdateAvailable;
+    private TextView tvAudioFormatBadge;
+    private TextView tvReceiverHwBadge;
 
     private View viewGlow;
     private View viewVisualizer1;
@@ -122,12 +131,16 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
                 }
             } else if (AudioStreamService.ACTION_IP_DISCOVERED.equals(action)) {
                 String ip = intent.getStringExtra(AudioStreamService.EXTRA_RECEIVER_IP);
+                String name = intent.getStringExtra(AudioStreamService.EXTRA_RECEIVER_NAME);
                 if (ip != null) {
                     currentSelectedIp = ip;
                     if (etManualIpMain != null) {
                         etManualIpMain.setText(ip);
                     }
                     saveIpToList(ip);
+                    if (name != null) {
+                        handleDiscoveredName(ip, name);
+                    }
                 }
             } else if (AudioStreamService.ACTION_TRIAL_EXPIRED.equals(action)) {
                 updateUIState();
@@ -137,6 +150,9 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
                 updateUIState();
                 Toast.makeText(context, "⚠️ Mode Uji Coba membutuhkan koneksi internet!", Toast.LENGTH_LONG).show();
                 LicenseDialog.show(context, MainFragment.this::updateBadgeHiFi);
+            } else if (com.example.amplifierpro.manager.EqSettingsManager.ACTION_RECEIVER_HW_CHANGED.equals(action) ||
+                       com.example.amplifierpro.manager.EqSettingsManager.ACTION_AUDIO_STREAM_MODE_CHANGED.equals(action)) {
+                updateAudioBadges();
             }
         }
     };
@@ -194,6 +210,10 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
         if (btnExit instanceof android.widget.ImageButton) {
             ((android.widget.ImageButton) btnExit).setColorFilter(theme.accentColor);
         }
+        View btnSettings = root.findViewById(R.id.btnStreamingSettings);
+        if (btnSettings instanceof android.widget.ImageButton) {
+            ((android.widget.ImageButton) btnSettings).setColorFilter(theme.accentColor);
+        }
         if (btnUpdateAvailable != null) {
             btnUpdateAvailable.setTextColor(theme.accentColor);
             int alphaAccent = Color.argb(32, Color.red(theme.accentColor), Color.green(theme.accentColor), Color.blue(theme.accentColor));
@@ -205,13 +225,20 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
     }
 
     private void handleDiscoveredName(String ip, String name) {
-        if (getContext() == null) return;
+        if (getContext() == null || ip == null || name == null) return;
+        String cleanName = name.trim();
+        if (cleanName.isEmpty() || cleanName.equalsIgnoreCase("Receiver") || cleanName.equalsIgnoreCase(ip)) {
+            return;
+        }
         SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         boolean isRenamed = prefs.getBoolean(KEY_IP_RENAMED_FLAG_PREFIX + ip, false);
 
         if (!isRenamed) {
-            prefs.edit().putString(KEY_IP_NAME_PREFIX + ip, name).apply();
-            refreshSavedIpsUI();
+            String current = prefs.getString(KEY_IP_NAME_PREFIX + ip, "");
+            if (!cleanName.equals(current)) {
+                prefs.edit().putString(KEY_IP_NAME_PREFIX + ip, cleanName).apply();
+                refreshSavedIpsUI();
+            }
         }
     }
 
@@ -219,13 +246,21 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
         btnToggleStream = view.findViewById(R.id.btnToggleStream);
         tvStatus = view.findViewById(R.id.tvStatus);
         tvWifiSignal = view.findViewById(R.id.tvWifiSignal);
+        tvAudioFormatBadge = view.findViewById(R.id.tvAudioFormatBadge);
+        tvReceiverHwBadge = view.findViewById(R.id.tvReceiverHwBadge);
         etManualIpMain = view.findViewById(R.id.etManualIpMain);
         btnOkIp = view.findViewById(R.id.btnOkIp);
         btnScanQrMain = view.findViewById(R.id.btnScanQrMain);
+        btnHotspotMain = view.findViewById(R.id.btnHotspotMain);
         btnAutoDiscoverMain = view.findViewById(R.id.btnAutoDiscoverMain);
         layoutSavedIps = view.findViewById(R.id.layoutSavedIps);
         mainScrollView = view.findViewById(R.id.mainScrollView);
         btnUpdateAvailable = view.findViewById(R.id.btnUpdateAvailable);
+        View btnStreamingSettings = view.findViewById(R.id.btnStreamingSettings);
+        if (btnStreamingSettings != null) {
+            btnStreamingSettings.setOnClickListener(v -> StreamingSettingsDialog.show(requireContext(), this::updateAudioBadges));
+        }
+        updateAudioBadges();
         if (btnUpdateAvailable != null) {
             btnUpdateAvailable.setVisibility(View.GONE);
             btnUpdateAvailable.setOnClickListener(v -> showUpdateDialog());
@@ -293,6 +328,9 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
             if (!ip.isEmpty()) selectIpAndConnect(ip);
         });
         btnScanQrMain.setOnClickListener(v -> startQrScan());
+        if (btnHotspotMain != null) {
+            btnHotspotMain.setOnClickListener(v -> openHotspotSettings());
+        }
         btnAutoDiscoverMain.setOnClickListener(v -> {
             if (getContext() != null && LicenseManager.getInstance(requireContext()).isBlocked()) {
                 Toast.makeText(getContext(), "❌ Perangkat ini telah diblokir oleh administrator", Toast.LENGTH_LONG).show();
@@ -304,12 +342,14 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
             if (!AudioStreamService.isServiceRunning) {
                 checkPermissionsAndStart();
             } else {
-                if (AudioStreamService.lastStatus != null && AudioStreamService.lastStatus.contains("Mencari")) {
-                    Toast.makeText(getContext(), "Sedang mencari...", Toast.LENGTH_SHORT).show();
+                Intent discoverIntent = new Intent(getContext(), AudioStreamService.class);
+                discoverIntent.setAction(AudioStreamService.ACTION_TRIGGER_DISCOVERY);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    requireContext().startForegroundService(discoverIntent);
                 } else {
-                    stopStreaming();
-                    handlerMain.postDelayed(this::checkPermissionsAndStart, 500);
+                    requireContext().startService(discoverIntent);
                 }
+                Toast.makeText(getContext(), "Mencari Receiver...", Toast.LENGTH_SHORT).show();
             }
         });
         view.findViewById(R.id.btnExitApp).setOnClickListener(v -> {
@@ -406,7 +446,7 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
             TextView tvName = itemView.findViewById(R.id.tvReceiverName);
             TextView tvIp = itemView.findViewById(R.id.tvReceiverIp);
 
-            if (displayName.isEmpty() || displayName.equals(ip)) {
+            if (displayName.isEmpty() || displayName.equals(ip) || displayName.equalsIgnoreCase("Receiver")) {
                 tvName.setText(ip);
                 tvIp.setVisibility(View.GONE);
             } else {
@@ -764,10 +804,13 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
         filter.addAction(AudioStreamService.ACTION_IP_DISCOVERED);
         filter.addAction(AudioStreamService.ACTION_TRIAL_EXPIRED);
         filter.addAction(AudioStreamService.ACTION_TRIAL_OFFLINE_ERROR);
+        filter.addAction(com.example.amplifierpro.manager.EqSettingsManager.ACTION_RECEIVER_HW_CHANGED);
+        filter.addAction(com.example.amplifierpro.manager.EqSettingsManager.ACTION_AUDIO_STREAM_MODE_CHANGED);
 
         ContextCompat.registerReceiver(requireContext(), streamStateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         updateBadgeHiFi();
+        updateAudioBadges();
         if (getContext() != null) {
             LicenseManager.getInstance(requireContext()).checkOnlineStatus((status, isPro, msg) -> {
                 if (isAdded()) updateBadgeHiFi();
@@ -902,6 +945,8 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
     }
 
     private void stopStreaming() {
+        pendingProjectionData = null;
+        pendingResultCode = -1;
         requireContext().stopService(new Intent(getContext(), AudioStreamService.class));
     }
 
@@ -956,6 +1001,37 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
         }
     }
 
+    private void updateAudioBadges() {
+        if (tvAudioFormatBadge == null || tvReceiverHwBadge == null || getContext() == null) return;
+        com.example.amplifierpro.manager.EqSettingsManager settings =
+                new com.example.amplifierpro.manager.EqSettingsManager(getContext());
+        int mode = settings.getAudioStreamMode();
+        String activeIp = settings.getActiveReceiverIp();
+
+        if (mode == com.example.amplifierpro.manager.EqSettingsManager.STREAM_MODE_PCM) {
+            int effectiveSr = settings.getEffectiveSampleRate(activeIp);
+            String srLabel = (effectiveSr == 44100) ? "44.1k" : "48.0k";
+            tvAudioFormatBadge.setText("PCM " + srLabel + " (Bit-Perfect)");
+        } else {
+            tvAudioFormatBadge.setText("OPUS 48kHz (Kompresi)");
+        }
+
+        if (activeIp != null && !activeIp.isEmpty()) {
+            int nativeSr = settings.getReceiverNativeSampleRate(activeIp);
+            String nativeLabel = (nativeSr == 44100) ? "44.1k" : ((nativeSr == 48000) ? "48k" : (nativeSr / 1000) + "k");
+            String supported = settings.getReceiverSupportedRates(activeIp);
+            String supShort = supported.replace("44100", "44k")
+                    .replace("48000", "48k")
+                    .replace("88200", "88k")
+                    .replace("96000", "96k")
+                    .replace("192000", "192k");
+            tvReceiverHwBadge.setVisibility(View.VISIBLE);
+            tvReceiverHwBadge.setText("HW: " + nativeLabel + " Native (Sup: " + supShort + ")");
+        } else {
+            tvReceiverHwBadge.setVisibility(View.GONE);
+        }
+    }
+
     public boolean isTouchInSavedReceivers(float rawX, float rawY) {
         if (mainScrollView == null || !mainScrollView.isAttachedToWindow() || mainScrollView.getVisibility() != View.VISIBLE) {
             return false;
@@ -968,4 +1044,50 @@ public class MainFragment extends Fragment implements ThemeManager.OnThemeChange
         int h = mainScrollView.getHeight();
         return rawX >= x && rawX <= (x + w) && rawY >= y && rawY <= (y + h);
     }
+
+    // ==========================================
+    // HOTSPOT CONTROL & STATUS
+    // ==========================================
+
+    private void openHotspotSettings() {
+        if (getContext() == null) return;
+        try {
+            Intent intent = new Intent("android.settings.TETHER_SETTINGS");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (intent.resolveActivity(requireContext().getPackageManager()) != null) {
+                startActivity(intent);
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            Intent intent = new Intent("com.android.settings.WIFI_AP_SETTINGS");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (intent.resolveActivity(requireContext().getPackageManager()) != null) {
+                startActivity(intent);
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            Intent intent = new Intent();
+            intent.setComponent(new ComponentName("com.android.settings", "com.android.settings.TetherSettings"));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            return;
+        } catch (Exception ignored) {}
+
+        try {
+            Intent intent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            return;
+        } catch (Exception ignored) {}
+
+        try {
+            startActivity(new Intent(Settings.ACTION_SETTINGS));
+        } catch (Exception ignored) {}
+    }
+
+
 }

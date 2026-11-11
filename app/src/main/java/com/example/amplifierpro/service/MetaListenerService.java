@@ -1,6 +1,7 @@
 package com.example.amplifierpro.service;
 
 import com.example.amplifierpro.network.CommandServer;
+import com.example.amplifierpro.ui.DummyFragment;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -46,22 +47,63 @@ public class MetaListenerService extends NotificationListenerService {
             if (ACTION_REQUEST_REFRESH.equals(intent.getAction())) {
                 findActiveController();
                 broadcastCurrentInfo(true);
+                broadcastRttStats();
             }
         }
     };
+
+    private static volatile long lastRttMin = 0;
+    private static volatile long lastRttAvg = 0;
+    private static volatile long lastRttMax = 0;
+    private static volatile long[] lastRttSamples = null;
+
+    private void broadcastRttStats() {
+        if (lastRttAvg > 0 || (lastRttSamples != null && lastRttSamples.length > 0)) {
+            Intent intent = new Intent(ACTION_RTT_STATS_UPDATED);
+            intent.putExtra(EXTRA_RTT_MIN, lastRttMin);
+            intent.putExtra(EXTRA_RTT_AVG, lastRttAvg);
+            intent.putExtra(EXTRA_RTT_MAX, lastRttMax);
+            if (lastRttSamples != null) {
+                intent.putExtra(EXTRA_RTT_SAMPLES, lastRttSamples);
+            }
+            intent.setPackage(getPackageName());
+            sendBroadcast(intent);
+        }
+    }
 
     // Command deduplication to handle UDP bursts correctly
     private String lastCommand = "";
     private long lastCommandTime = 0;
 
+    private static volatile long lastExternalPlayedTimestamp = 0L;
+    private static volatile boolean externalCurrentlyPlaying = false;
+
+    public static boolean isExternalAppPlaying() {
+        return externalCurrentlyPlaying;
+    }
+
+    public static long getLastExternalPlayedTimestamp() {
+        return lastExternalPlayedTimestamp;
+    }
+
     private final MediaController.Callback mediaCallback = new MediaController.Callback() {
         @Override
         public void onMetadataChanged(@Nullable MediaMetadata metadata) {
-            broadcastCurrentInfo(true);
+            if (!DummyFragment.isWebCurrentlyPlaying()) {
+                broadcastCurrentInfo(true);
+            }
         }
         @Override
         public void onPlaybackStateChanged(@Nullable PlaybackState state) {
-            broadcastCurrentInfo(true);
+            if (state != null && state.getState() == PlaybackState.STATE_PLAYING) {
+                lastExternalPlayedTimestamp = System.currentTimeMillis();
+                externalCurrentlyPlaying = true;
+            } else {
+                externalCurrentlyPlaying = false;
+            }
+            if (!DummyFragment.isWebCurrentlyPlaying()) {
+                broadcastCurrentInfo(true);
+            }
         }
     };
 
@@ -125,10 +167,22 @@ public class MetaListenerService extends NotificationListenerService {
             @Override
             public void onCommandReceived(String command, String senderIp) {
                 Log.d("DEBUG_RECV", "RAW UDP Received from " + senderIp + ": '" + command + "'");
-                if (command.startsWith("REC_VOL:")) {
+                if ("REC_BYE".equals(command) || "REC_STOP".equals(command)) {
+                    AudioStreamService.notifyReceiverDisconnected(senderIp);
+                    return;
+                }
+
+                // Any UDP command from receiver proves that receiver is alive
+                AudioStreamService.notifyReceiverAlive(senderIp);
+
+                if (command.startsWith("REC_VOL_PCT:")) {
+                    handleReceiverVolumePercentFeedback(command, senderIp);
+                } else if (command.startsWith("REC_VOL:")) {
                     handleReceiverVolumeFeedback(command, senderIp);
                 } else if (command.startsWith("VOL_CAPS:")) {
                     handleReceiverVolumeCaps(command, senderIp);
+                } else if (command.startsWith("REC_HW:")) {
+                    handleReceiverHardwareCaps(command, senderIp);
                 } else if (command.startsWith("RTT_STATS:")) {
                     handleRttStatsFeedback(command);
                 } else {
@@ -144,26 +198,54 @@ public class MetaListenerService extends NotificationListenerService {
             String[] parts = command.substring(10).split(":");
             if (parts.length >= 1) {
                 String[] stats = parts[0].split(",");
-                long min = Long.parseLong(stats[0]);
-                long avg = Long.parseLong(stats[1]);
-                long max = Long.parseLong(stats[2]);
-
-                Intent intent = new Intent(ACTION_RTT_STATS_UPDATED);
-                intent.putExtra(EXTRA_RTT_MIN, min);
-                intent.putExtra(EXTRA_RTT_AVG, avg);
-                intent.putExtra(EXTRA_RTT_MAX, max);
-
-                if (parts.length >= 2 && !parts[1].isEmpty()) {
-                    String[] sampleStrings = parts[1].split(",");
-                    long[] samples = new long[sampleStrings.length];
-                    for (int i = 0; i < sampleStrings.length; i++) {
-                        samples[i] = Long.parseLong(sampleStrings[i]);
-                    }
-                    intent.putExtra(EXTRA_RTT_SAMPLES, samples);
+                if (stats.length >= 3) {
+                    lastRttMin = Long.parseLong(stats[0].trim());
+                    lastRttAvg = Long.parseLong(stats[1].trim());
+                    lastRttMax = Long.parseLong(stats[2].trim());
                 }
-                intent.setPackage(getPackageName());
-                sendBroadcast(intent);
+
+                if (parts.length >= 2 && !parts[1].trim().isEmpty()) {
+                    String[] sampleStrings = parts[1].split(",");
+                    java.util.ArrayList<Long> sampleList = new java.util.ArrayList<>();
+                    for (String s : sampleStrings) {
+                        String t = s.trim();
+                        if (!t.isEmpty()) {
+                            try {
+                                sampleList.add(Long.parseLong(t));
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                    if (!sampleList.isEmpty()) {
+                        long[] samples = new long[sampleList.size()];
+                        for (int i = 0; i < sampleList.size(); i++) {
+                            samples[i] = sampleList.get(i);
+                        }
+                        lastRttSamples = samples;
+                    }
+                }
+                broadcastRttStats();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleReceiverVolumePercentFeedback(String command, String senderIp) {
+        try {
+            // Format baru: REC_VOL_PCT:<percent>
+            String payload = command.substring(12);
+            com.example.amplifierpro.manager.EqSettingsManager manager =
+                    new com.example.amplifierpro.manager.EqSettingsManager(this);
+            String ip = senderIp;
+            if (ip == null || ip.trim().isEmpty()) {
+                ip = com.example.amplifierpro.service.AudioStreamService.currentReceiverIp;
+            }
+            if (ip != null && !ip.trim().isEmpty()) {
+                manager.setActiveReceiverIp(ip.trim());
+            }
+
+            int percent = Integer.parseInt(payload.trim());
+            manager.applyReceiverVolumePercentReport(ip, percent);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -176,18 +258,24 @@ public class MetaListenerService extends NotificationListenerService {
             String payload = command.substring(8);
             com.example.amplifierpro.manager.EqSettingsManager manager =
                     new com.example.amplifierpro.manager.EqSettingsManager(this);
-            String ip = com.example.amplifierpro.service.AudioStreamService.currentReceiverIp;
-            if (ip == null || ip.isEmpty()) ip = senderIp;
-            if (ip == null || ip.isEmpty()) ip = manager.getActiveReceiverIp();
-            if (ip != null && !ip.isEmpty() && manager.getActiveReceiverIp().isEmpty()) {
-                manager.setActiveReceiverIp(ip);
+            String ip = senderIp;
+            if (ip == null || ip.trim().isEmpty()) {
+                ip = com.example.amplifierpro.service.AudioStreamService.currentReceiverIp;
+            }
+            if (ip != null && !ip.trim().isEmpty()) {
+                manager.setActiveReceiverIp(ip.trim());
             }
 
             String[] parts = payload.split(":");
             int index = Integer.parseInt(parts[0]);
             int max = parts.length >= 2 ? Integer.parseInt(parts[1]) : 0;
+            long seq = 0L;
+            if (parts.length >= 3) {
+                try { seq = Long.parseLong(parts[2].trim()); } catch (Exception ignored) {}
+            }
             // Simpan sebagai laporan (fromReceiver=true) -> tidak dikirim balik, anti-loop.
-            manager.applyReceiverVolumeReport(ip, index, max);
+            // Seq membuang paket duplikat/stale agar UI TX tidak ditimpa nilai lama.
+            manager.applyReceiverVolumeReport(ip, index, max, seq);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -200,6 +288,35 @@ public class MetaListenerService extends NotificationListenerService {
             String[] parts = payload.split(":");
             int max = Integer.parseInt(parts[0]);
             int current = parts.length >= 2 ? Integer.parseInt(parts[1]) : 0;
+            long seq = 0L;
+            if (parts.length >= 3) {
+                try { seq = Long.parseLong(parts[2].trim()); } catch (Exception ignored) {}
+            }
+            com.example.amplifierpro.manager.EqSettingsManager manager =
+                    new com.example.amplifierpro.manager.EqSettingsManager(this);
+            String ip = senderIp;
+            if (ip == null || ip.trim().isEmpty()) {
+                ip = com.example.amplifierpro.service.AudioStreamService.currentReceiverIp;
+            }
+            if (ip != null && !ip.trim().isEmpty()) {
+                manager.setActiveReceiverIp(ip.trim());
+            }
+            manager.setReceiverVolumeCaps(ip, max, current, seq);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** REC_HW:<nativeSr>:<supportedCsv>:<model>:<halType> — kapabilitas hardware DAC & HAL receiver */
+    private void handleReceiverHardwareCaps(String command, String senderIp) {
+        try {
+            String payload = command.substring(7); // skip "REC_HW:"
+            String[] parts = payload.split(":");
+            int nativeSr = Integer.parseInt(parts[0]);
+            String supportedCsv = parts.length >= 2 ? parts[1] : "44100,48000";
+            String model = parts.length >= 3 ? parts[2] : "Receiver";
+            String halType = parts.length >= 4 ? parts[3] : "AudioTrack HAL";
+
             com.example.amplifierpro.manager.EqSettingsManager manager =
                     new com.example.amplifierpro.manager.EqSettingsManager(this);
             String ip = com.example.amplifierpro.service.AudioStreamService.currentReceiverIp;
@@ -208,7 +325,8 @@ public class MetaListenerService extends NotificationListenerService {
             if (ip != null && !ip.isEmpty() && manager.getActiveReceiverIp().isEmpty()) {
                 manager.setActiveReceiverIp(ip);
             }
-            manager.setReceiverVolumeCaps(ip, max, current);
+            manager.saveReceiverHwCaps(ip, nativeSr, supportedCsv, model, halType);
+            Log.i(TAG, "Receiver HW detected: " + model + " (" + halType + "), Native=" + nativeSr + "Hz, Supported=" + supportedCsv);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -274,72 +392,189 @@ public class MetaListenerService extends NotificationListenerService {
 
     private void attemptExecuteCommand(String command, boolean allowRetry) {
         findActiveController();
-        if (activeController == null) {
-            if (allowRetry) {
-                Log.w("DEBUG_RECV", "RETRY: activeController NULL untuk " + command + ", coba lagi dalam 200ms");
-                updateHandler.postDelayed(() -> attemptExecuteCommand(command, false), 200);
+
+        boolean webPlaying = DummyFragment.isWebCurrentlyPlaying();
+        boolean webAvailable = DummyFragment.isWebPlaybackActive();
+        boolean webVisible = DummyFragment.isWebTabVisible();
+        boolean extPlaying = false;
+        if (activeController != null) {
+            PlaybackState ps = activeController.getPlaybackState();
+            if (ps != null && ps.getState() == PlaybackState.STATE_PLAYING) {
+                extPlaying = true;
+                lastExternalPlayedTimestamp = System.currentTimeMillis();
+                externalCurrentlyPlaying = true;
+            }
+        }
+
+        Log.i("DEBUG_RECV", "attemptExecuteCommand: " + command +
+                " | webPlaying=" + webPlaying + ", webAvailable=" + webAvailable + ", webVisible=" + webVisible +
+                ", extPlaying=" + extPlaying + ", activeController=" + (activeController != null ? activeController.getPackageName() : "null"));
+
+        if ("GET_META".equals(command)) {
+            broadcastCurrentInfo(true);
+            return;
+        }
+
+        // Priority 1: Web UI is actively playing video/music
+        if (webPlaying && !extPlaying) {
+            Log.i("DEBUG_RECV", "Routing command '" + command + "' to Web UI (Playing)");
+            DummyFragment.executeRemoteCommand(this, command);
+            return;
+        }
+
+        // Priority 2: External app is actively playing music (e.g. YouTube app, Spotify, YT Music)
+        if (extPlaying && activeController != null) {
+            Log.i("DEBUG_RECV", "Routing command '" + command + "' to External Controller: " + activeController.getPackageName());
+            executeOnController(activeController, command);
+            return;
+        }
+
+        // If BOTH report playing, route to the most recently started or visible
+        if (webPlaying) {
+            DummyFragment.executeRemoteCommand(this, command);
+            return;
+        }
+
+        // Priority 3: Neither is actively playing (both paused/idle).
+        // Route based on whether Web UI tab is currently open in foreground OR which source played most recently!
+        long webLast = DummyFragment.getLastWebPlayedTimestamp();
+        long extLast = lastExternalPlayedTimestamp;
+
+        if (webAvailable && activeController != null) {
+            if (webVisible || (webLast > 0 && webLast >= extLast)) {
+                Log.i("DEBUG_RECV", "Routing command '" + command + "' to Web UI (Most Recent / Visible)");
+                DummyFragment.executeRemoteCommand(this, command);
             } else {
-                Log.e("DEBUG_RECV", "GAGAL: activeController tetap NULL, executing AudioManager fallback untuk: " + command);
-                executeFallbackMediaKey(command);
+                Log.i("DEBUG_RECV", "Routing command '" + command + "' to External Controller (Most Recent Paused): " + activeController.getPackageName());
+                executeOnController(activeController, command);
             }
             return;
         }
 
-        MediaController.TransportControls controls = activeController.getTransportControls();
-        Log.i("DEBUG_RECV", "SUCCESS: Executing " + command + " on " + activeController.getPackageName());
+        if (activeController != null) {
+            Log.i("DEBUG_RECV", "Routing command '" + command + "' to External Controller (Paused/Idle): " + activeController.getPackageName());
+            executeOnController(activeController, command);
+            return;
+        }
+
+        if (webAvailable || webVisible) {
+            Log.i("DEBUG_RECV", "Routing command '" + command + "' to Web UI (Loaded/Visible)");
+            DummyFragment.executeRemoteCommand(this, command);
+            return;
+        }
+
+        // Priority 5: Fallback if everything is null/empty
+        if (allowRetry) {
+            Log.w("DEBUG_RECV", "RETRY: No active controller/web for " + command + ", retrying in 200ms");
+            updateHandler.postDelayed(() -> attemptExecuteCommand(command, false), 200);
+        } else {
+            Log.i("DEBUG_RECV", "Executing fallback to both Web UI and AudioManager for: " + command);
+            DummyFragment.executeRemoteCommand(this, command);
+            executeFallbackMediaKey(command);
+        }
+    }
+
+    private void executeOnController(MediaController controller, String command) {
+        if (controller == null) return;
+        MediaController.TransportControls controls = controller.getTransportControls();
+        PlaybackState state = controller.getPlaybackState();
+        int currentState = (state != null) ? state.getState() : PlaybackState.STATE_NONE;
+        long actions = (state != null) ? state.getActions() : 0L;
+        Log.i("DEBUG_RECV", "SUCCESS: Executing " + command + " on " + controller.getPackageName() + " (state=" + currentState + ")");
+        lastExternalPlayedTimestamp = System.currentTimeMillis();
+
         switch (command) {
-            case "GET_META":
-                broadcastCurrentInfo(true);
-                break;
             case "TOGGLE":
-                PlaybackState state = activeController.getPlaybackState();
-                long actions = (state != null) ? state.getActions() : 0L;
-                if (state != null && state.getState() == PlaybackState.STATE_PLAYING) {
-                    if ((actions & PlaybackState.ACTION_PAUSE) != 0) {
-                        try { controls.pause(); } catch (Exception ignored) {}
-                    } else {
-                        sendMediaKeyEvent(activeController, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+            case "PLAY_PAUSE":
+                if (currentState == PlaybackState.STATE_PLAYING || currentState == PlaybackState.STATE_BUFFERING) {
+                    try {
+                        controls.pause();
+                    } catch (Exception ignored) {}
+                    if ((actions & PlaybackState.ACTION_PAUSE) == 0) {
+                        sendMediaKeyEvent(controller, KeyEvent.KEYCODE_MEDIA_PAUSE);
                     }
-                } else if (state != null && (state.getState() == PlaybackState.STATE_PAUSED || state.getState() == PlaybackState.STATE_STOPPED)) {
-                    if ((actions & PlaybackState.ACTION_PLAY) != 0) {
-                        try { controls.play(); } catch (Exception ignored) {}
-                    } else {
-                        sendMediaKeyEvent(activeController, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
-                    }
+                    // Optimistic state broadcast so Receiver button updates immediately
+                    externalCurrentlyPlaying = false;
+                    broadcastOptimisticExternalState(0);
                 } else {
-                    sendMediaKeyEvent(activeController, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+                    try {
+                        controls.play();
+                    } catch (Exception ignored) {}
+                    if ((actions & PlaybackState.ACTION_PLAY) == 0) {
+                        sendMediaKeyEvent(controller, KeyEvent.KEYCODE_MEDIA_PLAY);
+                    }
+                    externalCurrentlyPlaying = true;
+                    broadcastOptimisticExternalState(1);
                 }
                 break;
+            case "PLAY":
+                try { controls.play(); } catch (Exception ignored) {}
+                if ((actions & PlaybackState.ACTION_PLAY) == 0) {
+                    sendMediaKeyEvent(controller, KeyEvent.KEYCODE_MEDIA_PLAY);
+                }
+                externalCurrentlyPlaying = true;
+                broadcastOptimisticExternalState(1);
+                break;
+            case "PAUSE":
+                try { controls.pause(); } catch (Exception ignored) {}
+                if ((actions & PlaybackState.ACTION_PAUSE) == 0) {
+                    sendMediaKeyEvent(controller, KeyEvent.KEYCODE_MEDIA_PAUSE);
+                }
+                externalCurrentlyPlaying = false;
+                broadcastOptimisticExternalState(0);
+                break;
             case "NEXT":
-                PlaybackState nextState = activeController.getPlaybackState();
-                long nextActions = (nextState != null) ? nextState.getActions() : 0L;
-                if ((nextActions & PlaybackState.ACTION_SKIP_TO_NEXT) != 0) {
-                    try { controls.skipToNext(); } catch (Exception ignored) {}
-                } else {
-                    sendMediaKeyEvent(activeController, KeyEvent.KEYCODE_MEDIA_NEXT);
+                try {
+                    controls.skipToNext();
+                } catch (Exception ignored) {}
+                if ((actions & PlaybackState.ACTION_SKIP_TO_NEXT) == 0) {
+                    sendMediaKeyEvent(controller, KeyEvent.KEYCODE_MEDIA_NEXT);
                 }
                 break;
             case "PREV":
-                PlaybackState prevState = activeController.getPlaybackState();
-                long prevActions = (prevState != null) ? prevState.getActions() : 0L;
-                if ((prevActions & PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0) {
-                    try { controls.skipToPrevious(); } catch (Exception ignored) {}
-                } else {
-                    sendMediaKeyEvent(activeController, KeyEvent.KEYCODE_MEDIA_PREVIOUS);
+                try {
+                    controls.skipToPrevious();
+                } catch (Exception ignored) {}
+                if ((actions & PlaybackState.ACTION_SKIP_TO_PREVIOUS) == 0) {
+                    sendMediaKeyEvent(controller, KeyEvent.KEYCODE_MEDIA_PREVIOUS);
                 }
                 break;
         }
+
+        // Schedule follow-up metadata broadcasts to confirm state & track change to Receiver
+        updateHandler.postDelayed(() -> broadcastCurrentInfo(true), 150);
+        updateHandler.postDelayed(() -> broadcastCurrentInfo(true), 500);
+        updateHandler.postDelayed(() -> broadcastCurrentInfo(true), 1200);
+    }
+
+    private void broadcastOptimisticExternalState(int targetPlaying) {
+        try {
+            String t = (lastTitle != null && !lastTitle.isEmpty()) ? lastTitle : "WIFI STREAMING";
+            String a = (lastArtist != null) ? lastArtist : "";
+            long pos = 0;
+            if (activeController != null && activeController.getPlaybackState() != null) {
+                pos = activeController.getPlaybackState().getPosition();
+            }
+            long dur = Math.max(0, lastDuration);
+            lastState = targetPlaying;
+            String payload = t.toUpperCase() + "|" + a.toUpperCase() + "|" + pos + "|" + dur + "|" + targetPlaying;
+            Intent intent = new Intent("com.example.amplifierpro.METADATA_UPDATED");
+            intent.putExtra("info", payload);
+            sendBroadcast(intent);
+        } catch (Exception ignored) {}
     }
 
     private void findActiveController() {
         try {
             ComponentName cn = new ComponentName(this, MetaListenerService.class);
             List<MediaController> controllers = mediaSessionManager.getActiveSessions(cn);
+            String ownPkg = getPackageName();
             
             MediaController bestController = null;
             if (controllers != null && !controllers.isEmpty()) {
-                // Priority 1: Currently Playing
+                // Priority 1: External App Currently Playing
                 for (MediaController controller : controllers) {
+                    if (ownPkg.equals(controller.getPackageName())) continue;
                     PlaybackState state = controller.getPlaybackState();
                     if (state != null && state.getState() == PlaybackState.STATE_PLAYING) {
                         bestController = controller;
@@ -347,9 +582,10 @@ public class MetaListenerService extends NotificationListenerService {
                     }
                 }
                 
-                // Priority 2: Buffering
+                // Priority 2: External App Buffering
                 if (bestController == null) {
                     for (MediaController controller : controllers) {
+                        if (ownPkg.equals(controller.getPackageName())) continue;
                         PlaybackState state = controller.getPlaybackState();
                         if (state != null && state.getState() == PlaybackState.STATE_BUFFERING) {
                             bestController = controller;
@@ -358,9 +594,26 @@ public class MetaListenerService extends NotificationListenerService {
                     }
                 }
                 
-                // Priority 3: First available
+                // Priority 3: External App Paused with valid metadata
                 if (bestController == null) {
-                    bestController = controllers.get(0);
+                    for (MediaController controller : controllers) {
+                        if (ownPkg.equals(controller.getPackageName())) continue;
+                        PlaybackState state = controller.getPlaybackState();
+                        if (state != null && state.getState() == PlaybackState.STATE_PAUSED && controller.getMetadata() != null) {
+                            bestController = controller;
+                            break;
+                        }
+                    }
+                }
+
+                // Priority 4: First external controller available
+                if (bestController == null) {
+                    for (MediaController controller : controllers) {
+                        if (!ownPkg.equals(controller.getPackageName())) {
+                            bestController = controller;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -373,8 +626,13 @@ public class MetaListenerService extends NotificationListenerService {
             if (activeController != null) {
                 PlaybackState ps = activeController.getPlaybackState();
                 boolean playing = ps != null && ps.getState() == PlaybackState.STATE_PLAYING;
+                externalCurrentlyPlaying = playing;
+                if (playing) {
+                    lastExternalPlayedTimestamp = System.currentTimeMillis();
+                }
                 broadcastStatus(true, activeController.getPackageName(), playing);
             } else {
+                externalCurrentlyPlaying = false;
                 broadcastStatus(false, null, false);
             }
 
@@ -394,11 +652,17 @@ public class MetaListenerService extends NotificationListenerService {
     }
 
     private void broadcastCurrentInfo(boolean force) {
+        if (DummyFragment.isWebCurrentlyPlaying() || (activeController == null && DummyFragment.isWebPlaybackActive())) {
+            Log.i(TAG, "Requesting Web UI to refresh and broadcast metadata");
+            DummyFragment.requestMetaRefresh();
+            return;
+        }
+
         if (activeController == null) {
             if (force) {
                 // If forced but no controller, send a "No Media" signal
                 Intent intent = new Intent("com.example.amplifierpro.METADATA_UPDATED");
-                intent.putExtra("info", "WIFI PLAYING||0|0|1");
+                intent.putExtra("info", "AMPX||0|0|0");
                 sendBroadcast(intent);
             }
             return;

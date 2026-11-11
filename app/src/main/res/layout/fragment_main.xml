@@ -36,6 +36,19 @@
             android:textStyle="bold" />
 
         <ImageButton
+            android:id="@+id/btnStreamingSettings"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_toStartOf="@id/btnExitApp"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_tune"
+            android:contentDescription="Settings"
+            app:tint="@color/accent_green" />
+
+        <ImageButton
             android:id="@+id/btnExitApp"
             android:layout_width="44dp"
             android:layout_height="44dp"
@@ -80,24 +93,26 @@
                 android:maxLines="1" />
 
             <TextView
+                android:id="@+id/tvAudioFormatBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="10dp"
+                android:layout_marginEnd="6dp"
                 android:background="@drawable/badge_background"
                 android:paddingHorizontal="6dp"
-                android:text="16-BIT / 44.1kHz"
+                android:text="PCM 44.1kHz (Bit-Perfect)"
                 android:textColor="@color/white"
                 android:textSize="9sp"
                 android:textStyle="bold"
                 android:maxLines="1" />
 
             <TextView
+                android:id="@+id/tvReceiverHwBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/badge_background"
                 android:paddingHorizontal="6dp"
-                android:text="LOSSLESS"
-                android:textColor="@color/white"
+                android:text="HW: --"
+                android:textColor="@color/accent_green"
                 android:textSize="9sp"
                 android:textStyle="bold"
                 android:maxLines="1" />
@@ -250,16 +265,39 @@
                     android:layout_width="0dp"
                     android:layout_height="50dp"
                     android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
-                    android:text="SCAN QR CODE"
-                    android:textColor="@color/white"
-                    android:textSize="12sp"
+                    android:layout_marginEnd="4dp"
+                    android:ellipsize="end"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    app:strokeColor="#26FFFFFF"
-                    app:strokeWidth="1dp"
+                    android:maxLines="1"
+                    android:paddingHorizontal="2dp"
+                    android:text="SCAN QR"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    app:cornerRadius="16dp"
                     app:rippleColor="#1AFFFFFF"
-                    app:cornerRadius="16dp" />
+                    app:strokeColor="#26FFFFFF"
+                    app:strokeWidth="1dp" />
+
+                <Button
+                    android:id="@+id/btnHotspotMain"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="50dp"
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="4dp"
+                    android:ellipsize="end"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:maxLines="1"
+                    android:paddingHorizontal="2dp"
+                    android:text="HOTSPOT"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    app:cornerRadius="16dp"
+                    app:rippleColor="#1AFFFFFF"
+                    app:strokeColor="#26FFFFFF"
+                    app:strokeWidth="1dp" />
 
                 <Button
                     android:id="@+id/btnAutoDiscoverMain"
@@ -267,16 +305,19 @@
                     android:layout_width="0dp"
                     android:layout_height="50dp"
                     android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:text="AUTO DISCOVER"
-                    android:textColor="@color/white"
-                    android:textSize="12sp"
+                    android:layout_marginStart="4dp"
+                    android:ellipsize="end"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    app:strokeColor="#26FFFFFF"
-                    app:strokeWidth="1dp"
+                    android:maxLines="1"
+                    android:paddingHorizontal="2dp"
+                    android:text="AUTO DISCOVER"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    app:cornerRadius="16dp"
                     app:rippleColor="#1AFFFFFF"
-                    app:cornerRadius="16dp" />
+                    app:strokeColor="#26FFFFFF"
+                    app:strokeWidth="1dp" />
             </LinearLayout>
 
         </LinearLayout>

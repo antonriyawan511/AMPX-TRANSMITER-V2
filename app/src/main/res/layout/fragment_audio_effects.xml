@@ -247,8 +247,21 @@
                                             android:splitTrack="false" />
                                     </FrameLayout>
                                 </LinearLayout>
-                                <!-- Bottom Spacer to align with V-Bass spinners -->
-                                <Space android:layout_width="match_parent" android:layout_height="24dp" />
+                                <!-- Stereo Bass Mono Cutoff Spinner (aligned with V-Bass spinners) -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="24dp"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:layout_marginTop="2dp">
+                                    <Spinner
+                                        android:id="@+id/spinnerStereoCutoff"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:background="@drawable/spinner_background"
+                                        android:paddingStart="6dp"
+                                        android:paddingEnd="24dp" />
+                                </LinearLayout>
                             </LinearLayout>
                         </FrameLayout>
 

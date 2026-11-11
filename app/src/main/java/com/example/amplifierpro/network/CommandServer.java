@@ -32,7 +32,7 @@ public class CommandServer {
                 socket.setReuseAddress(true);
                 socket.bind(new InetSocketAddress(port));
                 
-                byte[] buffer = new byte[256];
+                byte[] buffer = new byte[2048];
                 while (isRunning.get()) {
                     DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                     socket.receive(packet);

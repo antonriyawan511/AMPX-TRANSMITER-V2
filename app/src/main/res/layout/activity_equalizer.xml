@@ -219,7 +219,8 @@
             <LinearLayout
                 android:id="@+id/containerRow1"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:background="@drawable/section_background"
                 android:backgroundTint="#0DFFFFFF"
                 android:orientation="horizontal"
@@ -242,7 +243,8 @@
             <LinearLayout
                 android:id="@+id/containerRow2"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:background="@drawable/section_background"
                 android:backgroundTint="#0DFFFFFF"
                 android:orientation="horizontal"
@@ -265,7 +267,8 @@
             <LinearLayout
                 android:id="@+id/containerRow3"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:background="@drawable/section_background"
                 android:backgroundTint="#0DFFFFFF"
                 android:orientation="horizontal"
@@ -309,3 +312,5 @@
         tools:alpha="1" />
 
 </RelativeLayout>
+
+

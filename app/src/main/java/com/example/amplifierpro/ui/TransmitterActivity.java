@@ -70,12 +70,22 @@ public class TransmitterActivity extends AppCompatActivity implements ThemeManag
             return insets;
         });
         
-        // MainFragment is now at index 2 (Dummy=0, Equalizer=1, Main=2, Effects=3)
-        viewPager.post(() -> viewPager.setCurrentItem(2, false));
+        // Restore tab terakhir yang dibuka (default 2 jika baru pertama kali install)
+        android.content.SharedPreferences appPrefs = getSharedPreferences("AMPLIFIER_SETTINGS", MODE_PRIVATE);
+        int savedPage = appPrefs.getInt("last_viewpager_page", 2);
+        if (savedInstanceState != null) {
+            savedPage = savedInstanceState.getInt("saved_page", savedPage);
+        }
+        final int initialPage = savedPage;
+        viewPager.post(() -> viewPager.setCurrentItem(initialPage, false));
 
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
+                // Simpan tab terakhir ke SharedPreferences
+                getSharedPreferences("AMPLIFIER_SETTINGS", MODE_PRIVATE)
+                        .edit().putInt("last_viewpager_page", position).apply();
+
                 // Kunci swipe pager di halaman YouTube (index 0): scroll bebas
                 // tanpa berebut gesture. Keluar via fling tegas dari host.
                 viewPager.setUserInputEnabled(position != 0);
@@ -182,6 +192,32 @@ public class TransmitterActivity extends AppCompatActivity implements ThemeManag
             }
         }
         return super.dispatchTouchEvent(ev);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) {
+            VolumePeakHelper.handleVolumeKey(this, +1);
+            return true;
+        } else if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
+            VolumePeakHelper.handleVolumeKey(this, -1);
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (viewPager != null) {
+            outState.putInt("saved_page", viewPager.getCurrentItem());
+        }
     }
 
     @Override
