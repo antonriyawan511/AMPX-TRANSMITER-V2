@@ -105,12 +105,14 @@ class OpusUdpClient {
                 start(object : TransmitterControlChannel.Listener {
                     override fun onRequestConfig(senderAddress: InetAddress, senderPort: Int) {
                         val (targetMs, maxMs) = getBufferLimitsForPreset(currentPreset)
-                        sendConfig(senderAddress, currentPreset, targetMs, maxMs, currentFrameMs)
+                        val effectiveFrameMs = if (currentStreamMode == 0) 5 else currentFrameMs
+                        sendConfig(senderAddress, currentPreset, targetMs, maxMs, effectiveFrameMs)
                     }
                 })
                 targetAddress?.let { addr ->
                     val (targetMs, maxMs) = getBufferLimitsForPreset(currentPreset)
-                    sendStart(addr, currentPreset, targetMs, maxMs, currentFrameMs)
+                    val effectiveFrameMs = if (currentStreamMode == 0) 5 else currentFrameMs
+                    sendStart(addr, currentPreset, targetMs, maxMs, effectiveFrameMs)
                 }
             }
 
@@ -328,7 +330,8 @@ class OpusUdpClient {
 
         targetAddress?.let { addr ->
             val (targetMs, maxMs) = getBufferLimitsForPreset(preset)
-            controlChannel?.sendConfig(addr, preset, targetMs, maxMs, frameMs)
+            val effectiveFrameMs = if (currentStreamMode == 0) 5 else frameMs
+            controlChannel?.sendConfig(addr, preset, targetMs, maxMs, effectiveFrameMs)
         }
     }
 
